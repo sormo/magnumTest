@@ -16,8 +16,10 @@
 #include <Magnum/Trade/MeshData.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 
+#include <iostream>
 #include <vector>
 #include <memory>
+#include <map>
 
 void setup();
 void draw(); 
@@ -90,8 +92,15 @@ public:
     void imguiDrawBegin();
     void imguiDrawEnd();
 
-    bool m_mousePressedOld = false;
-    bool m_mousePressedNew = false;
+    struct PressedEvent
+    {
+        bool valueOld = false;
+        bool valueNew = false;
+    };
+
+    PressedEvent m_mousePressed;
+
+    std::map<char, PressedEvent> m_pressedKeys;
 };
 
 MyApplication::MyApplication(const Arguments& arguments)
@@ -140,17 +149,19 @@ void MyApplication::drawEvent()
     
     draw();
 
-    m_circle.Draw(m_shader, m_cameraProjection);
-    m_circleOutline.Draw(m_shader, m_cameraProjection);
     m_rectanle.Draw(m_shader, m_cameraProjection);
     m_rectanleOutline.Draw(m_shader, m_cameraProjection);
+    m_circle.Draw(m_shader, m_cameraProjection);
+    m_circleOutline.Draw(m_shader, m_cameraProjection);
     
     imguiDrawEnd();
 
     swapBuffers();
     redraw();
 
-    m_mousePressedOld = m_mousePressedNew;
+    m_mousePressed.valueOld = m_mousePressed.valueNew;
+    for (auto& v : m_pressedKeys)
+        v.second.valueOld = v.second.valueNew;
 }
 
 void MyApplication::imguiInit()
@@ -190,25 +201,34 @@ void MyApplication::viewportEvent(ViewportEvent& event)
 void MyApplication::keyPressEvent(KeyEvent& event)
 {
     if (g_imgui.handleKeyPressEvent(event)) return;
+
+    if (event.isRepeated())
+        return;
+
+    std::cout << "pressed\n";
+
+    m_pressedKeys[(char)event.key()] = { false, true };
 }
 
 void MyApplication::keyReleaseEvent(KeyEvent& event)
 {
     if (g_imgui.handleKeyReleaseEvent(event)) return;
+
+    m_pressedKeys[(char)event.key()] = { true, false };
 }
 
 void MyApplication::mousePressEvent(MouseEvent& event)
 {
     if (g_imgui.handleMousePressEvent(event)) return;
 
-    m_mousePressedNew = true;
+    m_mousePressed.valueNew = true;
 }
 
 void MyApplication::mouseReleaseEvent(MouseEvent& event)
 {
     if (g_imgui.handleMouseReleaseEvent(event)) return;
 
-    m_mousePressedNew = false;
+    m_mousePressed.valueNew = false;
 }
 
 void MyApplication::mouseMoveEvent(MouseMoveEvent& event) 
@@ -238,38 +258,43 @@ Math::Matrix3<float> CreateTransformation(Vector2 translation, float radians, Ve
     return Math::Matrix3<float>::from(rotation.toMatrix(), translation) * Math::Matrix3<float>::scaling(scale);
 }
 
-namespace Application2D
+namespace app2d
 {
-    Color rgb(uint8_t r, uint8_t g, uint8_t b)
+    col3 rgb(uint8_t r, uint8_t g, uint8_t b)
     {
-        return Color(r / 255.0f, g / 255.0f, b / 255.0f);
+        return col3(r / 255.0f, g / 255.0f, b / 255.0f);
     }
 
-    void setCameraCenter(Point center)
+    void setCameraCenter(vec2 center)
     {
         g_application->m_cameraCenter = center;
         g_application->m_cameraProjection = Math::Matrix3<float>::projection(g_application->m_cameraCenter - g_application->m_cameraSize / 2.0f, 
                                                                              g_application->m_cameraCenter + g_application->m_cameraSize / 2.0f);
     }
 
-    Point getCameraCenter()
+    vec2 getCameraCenter()
     {
         return g_application->m_cameraCenter;
     }
 
-    void setCameraSize(Point size)
+    void setCameraSize(vec2 size)
     {
         g_application->m_cameraSize = size;
         g_application->m_cameraProjection = Math::Matrix3<float>::projection(g_application->m_cameraCenter - g_application->m_cameraSize / 2.0f,
                                                                              g_application->m_cameraCenter + g_application->m_cameraSize / 2.0f);
     }
 
-    Point getCameraSize()
+    vec2 getCameraSize()
     {
         return g_application->m_cameraSize;
     }
 
-    Point getMousePositionWindow()
+    vec2 getMousePositionCamera()
+    {
+        return convertWindowToCamera(getMousePositionWindow());
+    }
+
+    vec2 getMousePositionWindow()
     {
         int x = 0, y = 0;
 
@@ -280,9 +305,9 @@ namespace Application2D
         return { (float)x, (float)y };
     }
 
-    Point convertCameraToWindow(const Point& p)
+    vec2 convertCameraToWindow(const vec2& p)
     {
-        Point result = p + g_application->m_cameraSize / 2.0f - g_application->m_cameraCenter;
+        vec2 result = p + g_application->m_cameraSize / 2.0f - g_application->m_cameraCenter;
 
         result.x() *= (g_application->m_windowSize.x() / g_application->m_cameraSize.x());
         result.y() *= (g_application->m_windowSize.y() / g_application->m_cameraSize.y());
@@ -290,9 +315,9 @@ namespace Application2D
         return result;
     }
 
-    Point convertWindowToCamera(const Point& p)
+    vec2 convertWindowToCamera(const vec2& p)
     {
-        Point result = -g_application->m_cameraSize / 2.0f;
+        vec2 result = -g_application->m_cameraSize / 2.0f;
         
         result.x() += (p.x() / g_application->m_windowSize.x()) * g_application->m_cameraSize.x() + g_application->m_cameraCenter.x();
         result.y() += (p.y() / g_application->m_windowSize.y()) * g_application->m_cameraSize.y() + g_application->m_cameraCenter.y();
@@ -300,27 +325,27 @@ namespace Application2D
         return result;
     }
 
-    void drawCircle(Point center, float radius, Color color)
+    void drawCircle(vec2 center, float radius, col3 color)
     {
         g_application->m_circle.instanceData.push_back({ CreateTransformation(center, 0.0f, { radius, radius }), color });
     }
 
-    void drawCircleOutline(Point center, float radius, Color color)
+    void drawCircleOutline(vec2 center, float radius, col3 color)
     {
         g_application->m_circleOutline.instanceData.push_back({ CreateTransformation(center, 0.0f, { radius, radius }), color });
     }
 
-    void drawRectangle(Point center, float width, float height, Color color)
+    void drawRectangle(vec2 center, float width, float height, col3 color)
     {
-        g_application->m_rectanle.instanceData.push_back({ CreateTransformation(center, 0.0f, { width, height }), color });
+        g_application->m_rectanle.instanceData.push_back({ CreateTransformation(center, 0.0f, { width / 2.0f, height / 2.0f }), color });
     }
 
-    void drawRectangle(Point center, float rotation, float width, float height, Color color)
+    void drawRectangle(vec2 center, float rotation, float width, float height, col3 color)
     {
-        g_application->m_rectanle.instanceData.push_back({ CreateTransformation(center, rotation, { width, height }), color });
+        g_application->m_rectanle.instanceData.push_back({ CreateTransformation(center, rotation, { width / 2.0f, height / 2.0f }), color });
     }
 
-    void drawPolygon(const std::vector<Point>& points, Color color)
+    void drawPolygon(const std::vector<vec2>& points, col3 color)
     {
         GL::Buffer vertices;
         vertices.setData({ points.data(), points.size() }, GL::BufferUsage::StaticDraw);
@@ -333,7 +358,7 @@ namespace Application2D
         shader.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
     }
 
-    void drawPolyline(const std::vector<Point>& points, Color color)
+    void drawPolyline(const std::vector<vec2>& points, col3 color)
     {
         GL::Buffer vertices;
         vertices.setData({ points.data(), points.size() }, GL::BufferUsage::StaticDraw);
@@ -348,17 +373,38 @@ namespace Application2D
 
     bool isMousePressed()
     {
-        return g_application->m_mousePressedNew && g_application->m_mousePressedNew != g_application->m_mousePressedOld;
+        return g_application->m_mousePressed.valueNew && g_application->m_mousePressed.valueNew != g_application->m_mousePressed.valueOld;
     }
 
     bool isMouseReleased()
     {
-        return !g_application->m_mousePressedNew && g_application->m_mousePressedNew != g_application->m_mousePressedOld;
+        return !g_application->m_mousePressed.valueNew && g_application->m_mousePressed.valueNew != g_application->m_mousePressed.valueOld;
     }
 
     bool isMouseDown()
     {
-        return g_application->m_mousePressedNew;
+        return g_application->m_mousePressed.valueNew;
+    }
+
+    bool isKeyPressed(char key)
+    {
+        if (!g_application->m_pressedKeys.contains(key))
+            return false;
+
+        return g_application->m_pressedKeys[key].valueNew && g_application->m_pressedKeys[key].valueNew != g_application->m_pressedKeys[key].valueOld;
+    }
+
+    bool isKeyReleased(char key)
+    {
+        if (!g_application->m_pressedKeys.contains(key))
+            return false;
+
+        !g_application->m_pressedKeys[key].valueNew && g_application->m_pressedKeys[key].valueNew != g_application->m_pressedKeys[key].valueOld;
+    }
+
+    bool isKeyDown(char key)
+    {
+        return g_application->m_pressedKeys.contains(key) && g_application->m_pressedKeys[key].valueNew;
     }
 }
 

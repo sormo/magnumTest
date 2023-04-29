@@ -2,34 +2,39 @@
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Vector2.h>
 
-namespace Application2D
+namespace app2d
 {
-	using Color = Magnum::Math::Color3<float>;
-	Color rgb(uint8_t r, uint8_t g, uint8_t b);
+	using col3 = Magnum::Math::Color3<float>;
+	col3 rgb(uint8_t r, uint8_t g, uint8_t b);
 
-	using Point = Magnum::Math::Vector2<float>;
+	using vec2 = Magnum::Math::Vector2<float>;
 
-	void setCameraCenter(Point center);
-	Point getCameraCenter();
+	void setCameraCenter(vec2 center);
+	vec2 getCameraCenter();
 
-	void setCameraSize(Point size);
-	Point getCameraSize();
+	void setCameraSize(vec2 size);
+	vec2 getCameraSize();
 
-	Point convertCameraToWindow(const Point& p);
-	Point convertWindowToCamera(const Point& p);
+	vec2 convertCameraToWindow(const vec2& p);
+	vec2 convertWindowToCamera(const vec2& p);
 
-	Point getMousePositionWindow();
+	vec2 getMousePositionWindow();
+	vec2 getMousePositionCamera();
 	bool isMousePressed(); // true only in frame when mouse was pressed
 	bool isMouseReleased(); // true only in frame when mouse was released
 	bool isMouseDown();
 
-	void drawPolyline(const std::vector<Point>& points, Color color);
+	bool isKeyPressed(char key); // true only in frame when key was pressed
+	bool isKeyReleased(char key); // true only in frame when key was released
+	bool isKeyDown(char key);
 
-	void drawCircle(Point center, float radius, Color color);
-	void drawCircleOutline(Point center, float radius, Color color);
+	void drawPolyline(const std::vector<vec2>& points, col3 color);
+
+	void drawCircle(vec2 center, float radius, col3 color);
+	void drawCircleOutline(vec2 center, float radius, col3 color);
 	
-	void drawRectangle(Point center, float width, float height, Color color);
-	void drawRectangle(Point center, float rotation, float width, float height, Color color);
+	void drawRectangle(vec2 center, float width, float height, col3 color);
+	void drawRectangle(vec2 center, float rotation, float width, float height, col3 color);
 	
-	void drawPolygon(const std::vector<Point>& points, Color color);
+	void drawPolygon(const std::vector<vec2>& points, col3 color);
 }

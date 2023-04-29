@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <Type Name="Magnum::Math::Vector2&lt;*&gt;">
+        <DisplayString>{{ {_data[0],g}, {_data[1],g} }}</DisplayString>
+        <Expand>
+			<Item Name="x">_data[0]</Item>
+			<Item Name="y">_data[1]</Item>
+        </Expand>
+    </Type>
+</AutoVisualizer>

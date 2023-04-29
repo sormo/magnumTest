@@ -1,9 +1,11 @@
 find_package(Magnum REQUIRED GL Sdl2Application)
 find_package(MagnumIntegration REQUIRED ImGui)
 
+set (CMAKE_CXX_STANDARD 20)
+
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
-add_executable(Application2D Application2D.cpp Application2D.h main.cpp)
+add_executable(Application2D Application2D.cpp Application2D.h main.cpp utils.h utils.cpp)
 target_link_libraries(Application2D PRIVATE
     Magnum::Application
     Magnum::GL
