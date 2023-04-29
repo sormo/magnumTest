@@ -24,7 +24,7 @@ struct Rectangle
 
 	bool isInside(const app2d::vec2& p)
 	{
-		return p.x() > min.x() && p.x() < max.x() && p.y() > min.y() && p.y() < max.y();
+		return p.x() >= min.x() && p.x() <= max.x() && p.y() >= min.y() && p.y() <= max.y();
 	}
 
 	void setCenter(app2d::vec2&& c)
