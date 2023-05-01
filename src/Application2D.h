@@ -29,6 +29,7 @@ namespace app2d
 	bool isKeyDown(char key);
 
 	void drawPolyline(const std::vector<vec2>& points, col3 color);
+	void drawLines(const std::vector<vec2>& points, col3 color);
 
 	void drawCircle(vec2 center, float radius, col3 color);
 	void drawCircleOutline(vec2 center, float radius, col3 color);

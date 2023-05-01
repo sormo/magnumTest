@@ -76,6 +76,7 @@ public:
     void textInputEvent(TextInputEvent& event) override;
 
     Shaders::FlatGL2D m_shader{ NoCreate };
+    Shaders::FlatGL2D m_shaderDefault;
 
     DrawMesh m_circle;
     DrawMesh m_circleOutline;
@@ -354,8 +355,7 @@ namespace app2d
         mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
         mesh.setCount(points.size());
 
-        Shaders::FlatGL2D shader;
-        shader.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
     }
 
     void drawPolyline(const std::vector<vec2>& points, col3 color)
@@ -367,8 +367,19 @@ namespace app2d
         mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
         mesh.setCount(points.size());
 
-        Shaders::FlatGL2D shader;
-        shader.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+    }
+
+    void drawLines(const std::vector<vec2>& points, col3 color)
+    {
+        GL::Buffer vertices;
+        vertices.setData({ points.data(), points.size() }, GL::BufferUsage::StaticDraw);
+
+        GL::Mesh mesh{ MeshPrimitive::Lines };
+        mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
+        mesh.setCount(points.size());
+
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
     }
 
     bool isMousePressed()

@@ -3,10 +3,11 @@
 #include <imgui.h>
 #include <algorithm>
 #include <array>
+#include <set>
 
-const float RopeNodeDistance = 0.1f;
+const float RopeNodeDistance = 0.5f;
 float RopeSimmulationDelta = 0.01f;
-const int32_t RopeConstraintIterations = 50;
+const int32_t RopeConstraintIterations = 2;
 const app2d::vec2 Gravity = app2d::vec2(0.0f, -9.89f);
 
 struct Rectangle
@@ -73,12 +74,17 @@ struct RopeNode
 	app2d::vec2& position;
 	app2d::vec2 positionOld;
     float mass = 1.0f;
+
+	std::vector<std::reference_wrapper<RopeNode>> childs;
 };
 
 struct Rope
 {
 	std::vector<app2d::vec2> positions;
 	std::vector<RopeNode> nodes;
+
+	size_t pointsX;
+	size_t pointsY;
 };
 
 Rope createRope(app2d::vec2 p1, app2d::vec2 p2)
@@ -86,16 +92,112 @@ Rope createRope(app2d::vec2 p1, app2d::vec2 p2)
 	Rope rope;
 
 	rope.positions = utils::generatePoints(p1, p2, RopeNodeDistance);
-	for (auto& p : rope.positions)
-		rope.nodes.emplace_back(p);
+	for (size_t i = 0; i < rope.positions.size(); i++)
+		rope.nodes.emplace_back(rope.positions[i]);
+
+	for (size_t i = 0; i < rope.nodes.size(); i++)
+	{
+		if (i > 0)
+			rope.nodes[i].childs.push_back(rope.nodes[i - 1]);
+		if (i < rope.nodes.size() - 1)
+			rope.nodes[i].childs.push_back(rope.nodes[i + 1]);
+	}
+
+	rope.pointsX = 1;
+	rope.pointsY = rope.positions.size();
 
 	return rope;
+}
+
+Rope createRectRope(app2d::vec2 rectMin, app2d::vec2 rectMax)
+{
+	Rope rope;
+
+	rope.pointsX = (rectMax.x() - rectMin.x()) / RopeNodeDistance;
+	rope.pointsY = (rectMax.y() - rectMin.y()) / RopeNodeDistance;
+
+	rope.positions.resize(rope.pointsX * rope.pointsY);
+
+	for (size_t x = 0; x < rope.pointsX; x++)
+	{
+		for (size_t y = 0; y < rope.pointsY; y++)
+		{
+			rope.positions[x * rope.pointsY + y] = app2d::vec2(rectMin.x() + x * RopeNodeDistance, rectMin.y() + y * RopeNodeDistance);
+			rope.nodes.emplace_back(rope.positions[x * rope.pointsY + y]);
+		}
+	}
+
+	for (size_t x = 0; x < rope.pointsX; x++)
+	{
+		for (size_t y = 0; y < rope.pointsY; y++)
+		{
+			if (x > 0)
+				rope.nodes[x * rope.pointsY + y].childs.push_back(rope.nodes[(x-1) * rope.pointsY + y]);
+			if (x < rope.pointsX - 1)
+				rope.nodes[x * rope.pointsY + y].childs.push_back(rope.nodes[(x + 1) * rope.pointsY + y]);
+			if (y > 0)
+				rope.nodes[x * rope.pointsY + y].childs.push_back(rope.nodes[x * rope.pointsY + y - 1]);
+			if (y < rope.pointsY - 1)
+				rope.nodes[x * rope.pointsY + y].childs.push_back(rope.nodes[x * rope.pointsY + y + 1]);
+		}
+	}
+
+	for (size_t x = 0; x < rope.pointsX; x++)
+		rope.nodes[x * rope.pointsY + rope.pointsY - 1].mass = 0.0f;
+
+	return rope;
+}
+
+void visit(RopeNode& node, const app2d::vec2& parentPosition, std::set<RopeNode*>& visited, std::vector<app2d::vec2>& linePoints)
+{
+	linePoints.push_back(parentPosition);
+	linePoints.push_back(node.position);
+
+	if (visited.contains(&node))
+		return;
+	visited.insert(&node);
+
+	for (auto& child : node.childs)
+		visit(child, node.position, visited, linePoints);
 }
 
 void drawRope(Rope& rope)
 {
 	for (const auto& p : rope.positions)
 		app2d::drawCircle(p, 0.05f, app2d::rgb(0, 128, 255));
+
+	//for (size_t x = 0; x < rope.pointsX; x++)
+	//{
+	//	std::vector<app2d::vec2> polyline;
+	//	for (size_t y = 0; y < rope.pointsY; y++)
+	//		polyline.push_back(rope.nodes[x * rope.pointsY + y].position);
+	//	app2d::drawPolyline(polyline, app2d::rgb(0, 128, 255));
+	//}
+
+	//for (size_t y = 0; y < rope.pointsY; y++)
+	//{
+	//	std::vector<app2d::vec2> polyline;
+	//	for (size_t x = 0; x < rope.pointsX; x++)
+	//		polyline.push_back(rope.nodes[x * rope.pointsY + y].position);
+	//	app2d::drawPolyline(polyline, app2d::rgb(0, 128, 255));
+	//}
+
+	std::set<RopeNode*> visited;
+	std::vector<app2d::vec2> linePoints;
+
+	for (auto& node : rope.nodes)
+	{
+		if (visited.contains(&node))
+			continue;
+		visited.insert(&node);
+
+		for (auto& child : node.childs)
+			visit(child, node.position, visited, linePoints);
+	}
+
+	app2d::drawLines(linePoints, app2d::rgb(0, 128, 255));
+
+	//app2d::drawPolyline(rope.positions, app2d::rgb(0, 128, 255));
 }
 
 // ---
@@ -145,26 +247,26 @@ void simmulateStep(Rope& rope)
 
 void applyConstraints(Rope& rope)
 {
-	for (size_t i = 0; i < rope.nodes.size() - 1; i++)
+	for (RopeNode& node1 : rope.nodes)
 	{
-		RopeNode& node1 = rope.nodes[i];
-		RopeNode& node2 = rope.nodes[i + 1];
+		for (RopeNode& node2 : node1.childs)
+		{
+			float im1 = node1.mass == 0.0f ? 0.0f : 1.0f / node1.mass;
+			float im2 = node2.mass == 0.0f ? 0.0f : 1.0f / node2.mass;
+			float mult1 = im1 + im2 == 0.0f ? 0.0f : im1 / (im1 + im2), mult2 = im1 + im2 == 0.0f ? 0.0f : im2 / (im1 + im2);
 
-        float im1 = node1.mass == 0.0f ? 0.0f : 1.0f / node1.mass;
-        float im2 = node2.mass == 0.0f ? 0.0f : 1.0f / node2.mass;
-        float mult1 = im1 / (im1 + im2), mult2 = im2 / (im1 + im2);
-        
-		app2d::vec2 diff = node1.position - node2.position;
-        
-		float dist = diff.length();
-        float difference = 0.0f;
-        if (dist > 0.0f)
-            difference = (dist - RopeNodeDistance) / dist;
+			app2d::vec2 diff = node1.position - node2.position;
 
-        diff *= 0.5f * difference;
+			float dist = diff.length();
+			float difference = 0.0f;
+			if (dist > 0.0f)
+				difference = (dist - RopeNodeDistance) / dist;
 
-        node1.position -= diff * mult1;
-        node2.position += diff * mult2;
+			diff *= 0.5f * difference;
+
+			node1.position -= diff * mult1;
+			node2.position += diff * mult2;
+		}
 	}
 }
 
@@ -173,8 +275,10 @@ void setup()
 	app2d::setCameraCenter({ 0.0f, 0.0f });
 	app2d::setCameraSize({ 32.0f, 24.0f });
 
-	g_rope = createRope({ 0.0f, 10.0f }, { -14.0f, 4.0f });
-	g_rope.nodes[0].mass = 0.0f;
+	//g_rope = createRope({ 0.0f, 10.0f }, { -14.0f, 4.0f });
+	//g_rope.nodes[0].mass = 0.0f;
+
+	g_rope = createRectRope({ -10.0f, -10.0f }, { 10.0f, 10.0f });
 
 	g_rectangles.push_back(Rectangle::fromCenterSize({0.0f, 0.0f}, { 4.0f, 2.0f }));
 }
@@ -199,7 +303,7 @@ void lineAdd()
 	}
 }
 
-void moveRect()
+bool moveRect()
 {
 	static std::optional<Rectangle*> grabbedRect;
 	static app2d::vec2 grabOffset;
@@ -214,19 +318,56 @@ void moveRect()
 			{
 				grabbedRect = &r;
 				grabOffset = position - r.center;
-				break;
+				
+				return true;
 			}
 		}
 	}
-	else if (app2d::isMouseReleased())
+	else if (app2d::isMouseReleased() && grabbedRect)
 	{
 		grabbedRect.reset();
+
+		return true;
 	}
 	else if (grabbedRect)
 	{
 		auto position = app2d::getMousePositionCamera();
 
 		(*grabbedRect)->setCenter(position - grabOffset);
+
+		return true;
+	}
+
+	return false;
+}
+
+void cutTheRope()
+{
+	static std::optional<app2d::vec2> cutPosition;
+
+	if (app2d::isMousePressed())
+	{
+		cutPosition = app2d::getMousePositionCamera();
+	}
+	else if (app2d::isMouseReleased())
+	{
+		cutPosition.reset();
+	}
+	else if (cutPosition)
+	{
+		auto position = app2d::getMousePositionCamera();
+
+		for (auto& node : g_rope.nodes)
+		{
+			for (auto it = node.childs.begin(); it != node.childs.end();)
+			{
+				if (utils::doLineSegmentsIntersect(*cutPosition, position, node.position, ((RopeNode&)(*it)).position))
+					it = node.childs.erase(it);
+				else
+					it++;
+			}
+		}
+		cutPosition = position;
 	}
 }
 
@@ -257,7 +398,10 @@ void draw()
 		app2d::drawRectangle(r.center, r.size.x(), r.size.y(), app2d::rgb(50, 50, 50));
 
 	//lineAdd();
-	moveRect();
+	if (!moveRect())
+	{
+		cutTheRope();
+	}
 }
 
 

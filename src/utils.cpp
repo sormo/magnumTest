@@ -132,4 +132,42 @@ namespace utils
 
         return edges[0].second;
     }
+
+    // Function to find orientation of three points
+    int orientation(const app2d::vec2& p, const app2d::vec2& q, const app2d::vec2& r)
+    {
+        float val = (q.y() - p.y()) * (r.x() - q.x()) - (q.x() - p.x()) * (r.y() - q.y());
+        if (fabs(val) < 1e-9) 
+            return 0;  // collinear
+        return (val > 0) ? 1 : 2; // 1 for clockwise, 2 for counterclockwise
+    }
+
+    // Function to check if a point lies within a line segment
+    bool isWithinSegment(const app2d::vec2& p, const app2d::vec2& q, const app2d::vec2& r)
+    {
+        if (q.x() <= fmax(p.x(), r.x()) && q.x() >= fmin(p.x(), r.x()) && q.y() <= fmax(p.y(), r.y()) && q.y() >= fmin(p.y(), r.y()))
+            return true;
+        return false;
+    }
+
+    // Function to check if two line segments intersect
+    bool doLineSegmentsIntersect(const app2d::vec2& p1, const app2d::vec2& q1, const app2d::vec2& p2, const app2d::vec2& q2)
+    {
+        // Find the four orientations needed for general and special cases
+        int o1 = orientation(p1, q1, p2);
+        int o2 = orientation(p1, q1, q2);
+        int o3 = orientation(p2, q2, p1);
+        int o4 = orientation(p2, q2, q1);
+
+        // General case
+        if (o1 != o2 && o3 != o4) return true;
+
+        // Special cases
+        if (o1 == 0 && isWithinSegment(p1, p2, q1)) return true;  // p1, q1 and p2 are collinear and p2 lies on segment p1q1
+        if (o2 == 0 && isWithinSegment(p1, q2, q1)) return true;  // p1, q1 and q2 are collinear and q2 lies on segment p1q1
+        if (o3 == 0 && isWithinSegment(p2, p1, q2)) return true;  // p2, q2 and p1 are collinear and p1 lies on segment p2q2
+        if (o4 == 0 && isWithinSegment(p2, q1, q2)) return true;  // p2, q2 and q1 are collinear and q1 lies on segment p2q2
+
+        return false; // Doesn't fall in any of the above cases
+    }
 }
