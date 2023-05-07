@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <algorithm>
 #include <array>
+#include <queue>
 #include <set>
 
 float RopeNodeDistance = 0.5f;
@@ -167,35 +168,38 @@ Rope createRectRope(app2d::vec2 rectMin, app2d::vec2 rectMax)
 	return rope;
 }
 
-void visit(RopeNode& node, const app2d::vec2& parentPosition, std::set<RopeNode*>& visited, std::vector<app2d::vec2>& linePoints)
-{
-	linePoints.push_back(parentPosition);
-	linePoints.push_back(node.position);
-
-	if (visited.contains(&node))
-		return;
-	visited.insert(&node);
-
-	for (auto& child : node.childs)
-		visit(child, node.position, visited, linePoints);
-}
-
 void drawRope(Rope& rope)
 {
 	for (const auto& p : rope.positions)
 		app2d::drawCircle(p, 0.05f, app2d::rgb(0, 128, 255));
 
-	std::set<RopeNode*> visited;
+	std::set<const RopeNode*> visited;
 	std::vector<app2d::vec2> linePoints;
 
-	for (auto& node : rope.nodes)
+	std::queue< const RopeNode*> nodes;
+	for (const RopeNode& node : rope.nodes)
 	{
 		if (visited.contains(&node))
 			continue;
-		visited.insert(&node);
+		nodes.push(&node);
 
-		for (auto& child : node.childs)
-			visit(child, node.position, visited, linePoints);
+		while (!nodes.empty())
+		{
+			const RopeNode* node = nodes.front();
+			nodes.pop();
+
+			if (visited.contains(node))
+				continue;
+			visited.insert(node);
+
+			for (const RopeNode& child : node->childs)
+			{
+				linePoints.push_back(node->position);
+				linePoints.push_back(child.position);
+
+				nodes.push(&child);
+			}
+		}
 	}
 
 	app2d::drawLines(linePoints, app2d::rgb(0, 128, 255));
