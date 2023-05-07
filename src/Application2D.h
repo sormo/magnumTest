@@ -9,6 +9,8 @@ namespace app2d
 
 	using vec2 = Magnum::Math::Vector2<float>;
 
+	vec2 getWindowSize();
+
 	void setCameraCenter(vec2 center);
 	vec2 getCameraCenter();
 

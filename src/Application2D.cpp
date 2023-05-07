@@ -9,7 +9,11 @@
 #include <Magnum/Math/ConfigurationValue.h>
 #include <Magnum/Math/DualComplex.h>
 #include <Magnum/MeshTools/Compile.h>
+#ifndef CORRADE_TARGET_EMSCRIPTEN
 #include <Magnum/Platform/Sdl2Application.h>
+#else
+#include <Magnum/Platform/EmscriptenApplication.h>
+#endif
 #include <Magnum/Primitives/Square.h>
 #include <Magnum/Primitives/Circle.h>
 #include <Magnum/Shaders/FlatGL.h>
@@ -88,6 +92,8 @@ public:
     Math::Vector2<float> m_cameraSize;
     Math::Vector2<float> m_windowSize;
 
+    Math::Vector2<float> m_mousePosition;
+
     ImGuiIntegration::Context g_imgui{ NoCreate };
     void imguiInit();
     void imguiDrawBegin();
@@ -113,22 +119,21 @@ MyApplication::MyApplication(const Arguments& arguments)
 {
 #if !defined(CORRADE_TARGET_EMSCRIPTEN) && !defined(CORRADE_TARGET_IOS)
     setWindowTitle("Application2D");
+    setSwapInterval(0);
 #endif
     g_application = this;
 
-    setSwapInterval(0);
-    
-    m_windowSize = { 800.0f, 600.0f };
-    m_cameraSize = { 20.0f, 15.0f };
-    m_cameraProjection = Matrix3::projection({ 20.0f, 15.0f });
+    m_windowSize = { (float)windowSize().x(), (float)windowSize().y() };
+    m_cameraSize = m_windowSize / 40.0f;
+    m_cameraProjection = Matrix3::projection(m_cameraSize);
 
     /* Create an instanced shader */
     auto shaderConfig = Shaders::FlatGL2D::Configuration{};
     shaderConfig.setFlags(Shaders::FlatGL2D::Flag::VertexColor | Shaders::FlatGL2D::Flag::InstancedTransformation );
     m_shader = Shaders::FlatGL2D{ shaderConfig };
 
-    setSwapInterval(1);
 #if !defined(CORRADE_TARGET_EMSCRIPTEN) && !defined(CORRADE_TARGET_ANDROID)
+    setSwapInterval(1);
     setMinimalLoopPeriod(16);
 #endif
 
@@ -203,8 +208,10 @@ void MyApplication::keyPressEvent(KeyEvent& event)
 {
     if (g_imgui.handleKeyPressEvent(event)) return;
 
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
     if (event.isRepeated())
         return;
+#endif
 
     std::cout << "pressed\n";
 
@@ -234,6 +241,11 @@ void MyApplication::mouseReleaseEvent(MouseEvent& event)
 
 void MyApplication::mouseMoveEvent(MouseMoveEvent& event) 
 {
+    m_mousePosition.x() = event.position().x();
+    m_mousePosition.y() = event.position().y();
+
+    m_mousePosition.y() = g_application->windowSize().y() - m_mousePosition.y();
+
     if (g_imgui.handleMouseMoveEvent(event)) return;
 }
 
@@ -264,6 +276,11 @@ namespace app2d
     col3 rgb(uint8_t r, uint8_t g, uint8_t b)
     {
         return col3(r / 255.0f, g / 255.0f, b / 255.0f);
+    }
+
+    vec2 getWindowSize()
+    {
+        return g_application->m_windowSize;
     }
 
     void setCameraCenter(vec2 center)
@@ -297,13 +314,13 @@ namespace app2d
 
     vec2 getMousePositionWindow()
     {
-        int x = 0, y = 0;
+        //int x = 0, y = 0;
 
-        SDL_GetMouseState(&x, &y);
+        //SDL_GetMouseState(&x, &y);
 
-        y = g_application->windowSize().y() - y;
+        //y = g_application->windowSize().y() - y;
 
-        return { (float)x, (float)y };
+        return g_application->m_mousePosition;
     }
 
     vec2 convertCameraToWindow(const vec2& p)
@@ -410,7 +427,7 @@ namespace app2d
         if (!g_application->m_pressedKeys.contains(key))
             return false;
 
-        !g_application->m_pressedKeys[key].valueNew && g_application->m_pressedKeys[key].valueNew != g_application->m_pressedKeys[key].valueOld;
+        return !g_application->m_pressedKeys[key].valueNew && g_application->m_pressedKeys[key].valueNew != g_application->m_pressedKeys[key].valueOld;
     }
 
     bool isKeyDown(char key)

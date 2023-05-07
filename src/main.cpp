@@ -5,16 +5,23 @@
 #include <array>
 #include <set>
 
-const float RopeNodeDistance = 0.5f;
+float RopeNodeDistance = 0.5f;
 float RopeSimmulationDelta = 0.01f;
-const int32_t RopeConstraintIterations = 2;
-const app2d::vec2 Gravity = app2d::vec2(0.0f, -9.89f);
+int32_t RopeConstraintIterations = 2;
+app2d::vec2 Gravity = app2d::vec2(0.0f, -9.89f);
+
+void setupRope();
 
 struct Rectangle
 {
-	static Rectangle fromCenterSize(app2d::vec2&& center, app2d::vec2&& size)
+	static Rectangle fromCenterSize(const app2d::vec2& center, const app2d::vec2& size)
 	{
 		return { center, size, center - size / 2.0f, center + size / 2.0f };
+	}
+
+	static Rectangle fromMinMax(const app2d::vec2& min, const app2d::vec2& max)
+	{
+		return { min + (max - min) / 2.0f, max - min, min, max };
 	}
 
 	app2d::vec2 center;
@@ -36,16 +43,11 @@ struct Rectangle
 	}
 };
 
-struct Line
-{
-	app2d::vec2 p1;
-	app2d::vec2 p2;
-};
-
 void testWindow()
 {
 	static bool is_open = false;
 
+	ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
 	if (!ImGui::Begin("Test", &is_open))
 	{
 		ImGui::End();
@@ -55,15 +57,32 @@ void testWindow()
 	//ImGui::ShowDemoWindow();
 
 	ImGui::Text("Time %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	ImGui::Text("Camera Size %.1f %.1f", app2d::getCameraSize().x(), app2d::getCameraSize().y());
-	ImGui::Text("Camera Center %.1f %.1f", app2d::getCameraCenter().x(), app2d::getCameraCenter().y());
+	if (ImGui::CollapsingHeader("Window"))
+	{
+		ImGui::Text("Camera Size %.1f %.1f", app2d::getCameraSize().x(), app2d::getCameraSize().y());
+		ImGui::Text("Camera Center %.1f %.1f", app2d::getCameraCenter().x(), app2d::getCameraCenter().y());
+		ImGui::Text("Canvas Size %.1f %.1f", app2d::getWindowSize().x(), app2d::getWindowSize().y());
 
-	auto mouse_position = app2d::getMousePositionWindow(), mouse_world_position = app2d::convertWindowToCamera(mouse_position);
-	ImGui::Text("Mouse Window %.1f %.1f", mouse_position.x(), mouse_position.y());
-	ImGui::Text("Mouse World %.1f %.1f", mouse_world_position.x(), mouse_world_position.y());
+		auto mousePosition = app2d::getMousePositionWindow();
+		auto moustPositionWorld = app2d::convertWindowToCamera(mousePosition);
+		ImGui::Text("Mouse Window %.1f %.1f", mousePosition.x(), mousePosition.y());
+		ImGui::Text("Mouse World %.1f %.1f", moustPositionWorld.x(), moustPositionWorld.y());
+	}
 
-	ImGui::Text("Simmulation Delta"); ImGui::SameLine(); ImGui::SliderFloat("##", & RopeSimmulationDelta, 0.001f, 0.015f);
-	//ImGui::SliderFloat("Simmulation Delta", &RopeSimmulationDelta, 0.05f, 0.15f);
+	if (ImGui::CollapsingHeader("Simmulation"))
+	{
+		ImGui::SliderFloat("Time Delta", &RopeSimmulationDelta, 0.001f, 0.015f);
+		ImGui::SliderFloat("Gravity", &Gravity.y(), -15.0f, -0.1f);
+		ImGui::SliderInt("Constraint Iterations", &RopeConstraintIterations, 1, 40);
+	}
+
+	if (ImGui::CollapsingHeader("Rope"))
+	{
+		if (ImGui::SliderFloat("Node Distance", &RopeNodeDistance, 0.1f, 2.0f))
+		{
+			setupRope();
+		}
+	}
 
 	ImGui::End();
 }
@@ -166,22 +185,6 @@ void drawRope(Rope& rope)
 	for (const auto& p : rope.positions)
 		app2d::drawCircle(p, 0.05f, app2d::rgb(0, 128, 255));
 
-	//for (size_t x = 0; x < rope.pointsX; x++)
-	//{
-	//	std::vector<app2d::vec2> polyline;
-	//	for (size_t y = 0; y < rope.pointsY; y++)
-	//		polyline.push_back(rope.nodes[x * rope.pointsY + y].position);
-	//	app2d::drawPolyline(polyline, app2d::rgb(0, 128, 255));
-	//}
-
-	//for (size_t y = 0; y < rope.pointsY; y++)
-	//{
-	//	std::vector<app2d::vec2> polyline;
-	//	for (size_t x = 0; x < rope.pointsX; x++)
-	//		polyline.push_back(rope.nodes[x * rope.pointsY + y].position);
-	//	app2d::drawPolyline(polyline, app2d::rgb(0, 128, 255));
-	//}
-
 	std::set<RopeNode*> visited;
 	std::vector<app2d::vec2> linePoints;
 
@@ -196,8 +199,6 @@ void drawRope(Rope& rope)
 	}
 
 	app2d::drawLines(linePoints, app2d::rgb(0, 128, 255));
-
-	//app2d::drawPolyline(rope.positions, app2d::rgb(0, 128, 255));
 }
 
 // ---
@@ -205,8 +206,6 @@ void drawRope(Rope& rope)
 Rope g_rope;
 
 std::vector<Rectangle> g_rectangles;
-std::vector<Line> g_lines;
-
 
 void applyCollisions(app2d::vec2& from, app2d::vec2& to)
 {
@@ -270,37 +269,41 @@ void applyConstraints(Rope& rope)
 	}
 }
 
+app2d::vec2 getWindowRelative(const app2d::vec2& relative)
+{
+	auto windowSize = app2d::getWindowSize();
+
+	return { windowSize.x() * relative.x(), windowSize.y() * relative.y() };
+}
+
+app2d::vec2 getWindowRelativeCamera(const app2d::vec2& relative)
+{
+	return app2d::convertWindowToCamera(getWindowRelative(relative));
+}
+
+void setupRope()
+{
+	//g_rope = createRope({ 0.0f, 10.0f }, { -14.0f, 4.0f });
+	//g_rope.nodes[0].mass = 0.0f;
+
+	g_rope = createRectRope(getWindowRelativeCamera({ 0.1f, 0.18f }), getWindowRelativeCamera({ 0.9f, 0.98f }));
+}
+
+void setupRectangle()
+{
+	float offset = 0.01f * app2d::getWindowSize().x();
+	app2d::vec2 min = app2d::convertWindowToCamera({ offset, offset });
+	app2d::vec2 max = getWindowRelativeCamera({ 0.08f, 0.08f });
+	g_rectangles.push_back(Rectangle::fromMinMax(min, max));
+}
+
 void setup()
 {
 	app2d::setCameraCenter({ 0.0f, 0.0f });
 	app2d::setCameraSize({ 32.0f, 24.0f });
 
-	//g_rope = createRope({ 0.0f, 10.0f }, { -14.0f, 4.0f });
-	//g_rope.nodes[0].mass = 0.0f;
-
-	g_rope = createRectRope({ -10.0f, -10.0f }, { 10.0f, 10.0f });
-
-	g_rectangles.push_back(Rectangle::fromCenterSize({0.0f, 0.0f}, { 4.0f, 2.0f }));
-}
-
-std::optional<app2d::vec2> linePoint1;
-
-void lineAdd()
-{
-	static app2d::vec2 mousePressed;
-
-	if (app2d::isMousePressed())
-	{
-		mousePressed = app2d::getMousePositionCamera();
-	}
-	else if (app2d::isMouseDown())
-	{
-		app2d::drawPolyline({ mousePressed, app2d::getMousePositionCamera() }, { 10,255,20 });
-	}
-	else if (app2d::isMouseReleased())
-	{
-		g_lines.emplace_back(mousePressed, app2d::getMousePositionCamera());
-	}
+	setupRope();
+	setupRectangle();
 }
 
 bool moveRect()
@@ -371,9 +374,10 @@ void cutTheRope()
 	}
 }
 
+
+
 void draw()
 {
-	ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
 	testWindow();
 
 	//if (app2d::isKeyDown('a') || app2d::isKeyPressed('s'))
@@ -384,20 +388,10 @@ void draw()
 	}
 
 	drawRope(g_rope);
-	
-	for (auto& l : g_lines)
-	{
-		app2d::drawPolyline({ l.p1, l.p2 }, app2d::rgb(10, 255, 20));
-
-		for (auto& r : g_rectangles)
-			if (auto intersection = utils::aabbRaycast(l.p1, l.p2, r.min, r.max))
-				app2d::drawCircle(*intersection, 0.1f, app2d::rgb(255, 0, 0));
-	}
 
 	for (auto& r : g_rectangles)
 		app2d::drawRectangle(r.center, r.size.x(), r.size.y(), app2d::rgb(50, 50, 50));
 
-	//lineAdd();
 	if (!moveRect())
 	{
 		cutTheRope();
