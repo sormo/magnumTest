@@ -11,6 +11,13 @@ float RopeSimmulationDelta = 0.01f;
 int32_t RopeConstraintIterations = 2;
 app2d::vec2 Gravity = app2d::vec2(0.0f, -9.89f);
 
+enum 
+{
+	InteractionCut = 0,
+	InteractionGrab = 1
+
+} Interaction;
+
 void setupRope();
 
 struct Rectangle
@@ -83,6 +90,8 @@ void testWindow()
 		{
 			setupRope();
 		}
+
+		ImGui::Combo("Interaction", (int*)&Interaction, "Cut\0Grab\0");
 	}
 
 	ImGui::End();
@@ -348,7 +357,7 @@ bool moveRect()
 	return false;
 }
 
-void cutTheRope()
+void cutRope()
 {
 	static std::optional<app2d::vec2> cutPosition;
 
@@ -378,7 +387,45 @@ void cutTheRope()
 	}
 }
 
+RopeNode* getClosestNode(const app2d::vec2& point)
+{
+	float distance = std::numeric_limits<float>::max();
+	RopeNode* result = nullptr;
 
+	for (auto& node : g_rope.nodes)
+	{
+		auto nodeDistance = (node.position - point).length();
+		if (nodeDistance < distance)
+		{
+			distance = nodeDistance;
+			result = &node;
+		}
+	}
+
+	return result;
+}
+
+void grabRope()
+{
+	static std::optional<RopeNode*> grabbedNode;
+
+	if (app2d::isMousePressed())
+	{
+		grabbedNode = getClosestNode(app2d::getMousePositionCamera());
+		(*grabbedNode)->mass = 0.0f;
+	}
+	else if (app2d::isMouseReleased())
+	{
+		(*grabbedNode)->mass = 1.0f;
+		grabbedNode = std::nullopt;
+	}
+
+	if (grabbedNode)
+	{
+		(*grabbedNode)->position = app2d::getMousePositionCamera();
+		(*grabbedNode)->positionOld = (*grabbedNode)->position;
+	}
+}
 
 void draw()
 {
@@ -398,7 +445,15 @@ void draw()
 
 	if (!moveRect())
 	{
-		cutTheRope();
+		switch (Interaction)
+		{
+		case InteractionCut:
+			cutRope();
+			break;
+		case InteractionGrab:
+			grabRope();
+			break;
+		}
 	}
 }
 
