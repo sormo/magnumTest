@@ -14,7 +14,8 @@ app2d::vec2 Gravity = app2d::vec2(0.0f, -9.89f);
 enum 
 {
 	InteractionCut = 0,
-	InteractionGrab = 1
+	InteractionGrab = 1,
+	InteractionAttract = 2,
 
 } Interaction;
 
@@ -91,7 +92,7 @@ void testWindow()
 			setupRope();
 		}
 
-		ImGui::Combo("Interaction", (int*)&Interaction, "Cut\0Grab\0");
+		ImGui::Combo("Interaction", (int*)&Interaction, "Cut\0Grab\0Attract\0");
 	}
 
 	ImGui::End();
@@ -243,15 +244,23 @@ void applyCollisions(app2d::vec2& from, app2d::vec2& to)
 
 void simmulateStep(Rope& rope)
 {
+	app2d::vec2 mousePosition = app2d::getMousePositionCamera();
+
 	for (auto& node : rope.nodes)
 	{
 		if (node.mass == 0.0f)
 			continue;
 
 		auto move = node.position - node.positionOld;
+		app2d::vec2 acceleration = Gravity;
+
+		if (Interaction == InteractionAttract && app2d::isMouseDown())
+		{
+			acceleration += (mousePosition - node.position);
+		}
 
 		node.positionOld = node.position;
-		node.position += move + RopeSimmulationDelta * RopeSimmulationDelta * Gravity;
+		node.position += move + RopeSimmulationDelta * RopeSimmulationDelta * acceleration;
 
 		applyCollisions(node.positionOld, node.position);
 	}
