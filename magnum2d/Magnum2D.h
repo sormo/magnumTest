@@ -2,7 +2,11 @@
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Vector2.h>
 
-namespace app2d
+// these two functions must be implemented by application
+void setup();
+void draw();
+
+namespace Magnum2D
 {
 	using col3 = Magnum::Math::Color3<float>;
 	col3 rgb(uint8_t r, uint8_t g, uint8_t b);

@@ -1,4 +1,4 @@
-#include "Application2D.h"
+#include <Magnum2D.h>
 #include "utils.h"
 #include <imgui.h>
 #include <algorithm>
@@ -9,7 +9,7 @@
 float RopeNodeDistance = 0.5f;
 float RopeSimmulationDelta = 0.01f;
 int32_t RopeConstraintIterations = 2;
-app2d::vec2 Gravity = app2d::vec2(0.0f, -9.89f);
+Magnum2D::vec2 Gravity = Magnum2D::vec2(0.0f, -9.89f);
 
 enum 
 {
@@ -23,28 +23,28 @@ void setupRope();
 
 struct Rectangle
 {
-	static Rectangle fromCenterSize(const app2d::vec2& center, const app2d::vec2& size)
+	static Rectangle fromCenterSize(const Magnum2D::vec2& center, const Magnum2D::vec2& size)
 	{
 		return { center, size, center - size / 2.0f, center + size / 2.0f };
 	}
 
-	static Rectangle fromMinMax(const app2d::vec2& min, const app2d::vec2& max)
+	static Rectangle fromMinMax(const Magnum2D::vec2& min, const Magnum2D::vec2& max)
 	{
 		return { min + (max - min) / 2.0f, max - min, min, max };
 	}
 
-	app2d::vec2 center;
-	app2d::vec2 size;
+	Magnum2D::vec2 center;
+	Magnum2D::vec2 size;
 
-	app2d::vec2 min;
-	app2d::vec2 max;
+	Magnum2D::vec2 min;
+	Magnum2D::vec2 max;
 
-	bool isInside(const app2d::vec2& p)
+	bool isInside(const Magnum2D::vec2& p)
 	{
 		return p.x() >= min.x() && p.x() <= max.x() && p.y() >= min.y() && p.y() <= max.y();
 	}
 
-	void setCenter(app2d::vec2&& c)
+	void setCenter(Magnum2D::vec2&& c)
 	{
 		center = c;
 		min = c - size / 2.0f;
@@ -68,12 +68,12 @@ void testWindow()
 	ImGui::Text("Time %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	if (ImGui::CollapsingHeader("Window"))
 	{
-		ImGui::Text("Camera Size %.1f %.1f", app2d::getCameraSize().x(), app2d::getCameraSize().y());
-		ImGui::Text("Camera Center %.1f %.1f", app2d::getCameraCenter().x(), app2d::getCameraCenter().y());
-		ImGui::Text("Canvas Size %.1f %.1f", app2d::getWindowSize().x(), app2d::getWindowSize().y());
+		ImGui::Text("Camera Size %.1f %.1f", Magnum2D::getCameraSize().x(), Magnum2D::getCameraSize().y());
+		ImGui::Text("Camera Center %.1f %.1f", Magnum2D::getCameraCenter().x(), Magnum2D::getCameraCenter().y());
+		ImGui::Text("Canvas Size %.1f %.1f", Magnum2D::getWindowSize().x(), Magnum2D::getWindowSize().y());
 
-		auto mousePosition = app2d::getMousePositionWindow();
-		auto moustPositionWorld = app2d::convertWindowToCamera(mousePosition);
+		auto mousePosition = Magnum2D::getMousePositionWindow();
+		auto moustPositionWorld = Magnum2D::convertWindowToCamera(mousePosition);
 		ImGui::Text("Mouse Window %.1f %.1f", mousePosition.x(), mousePosition.y());
 		ImGui::Text("Mouse World %.1f %.1f", moustPositionWorld.x(), moustPositionWorld.y());
 	}
@@ -100,9 +100,9 @@ void testWindow()
 
 struct RopeNode
 {
-	RopeNode(app2d::vec2& p) : position(p), positionOld(p) {}
-	app2d::vec2& position;
-	app2d::vec2 positionOld;
+	RopeNode(Magnum2D::vec2& p) : position(p), positionOld(p) {}
+	Magnum2D::vec2& position;
+	Magnum2D::vec2 positionOld;
     float mass = 1.0f;
 
 	std::vector<std::reference_wrapper<RopeNode>> childs;
@@ -110,14 +110,14 @@ struct RopeNode
 
 struct Rope
 {
-	std::vector<app2d::vec2> positions;
+	std::vector<Magnum2D::vec2> positions;
 	std::vector<RopeNode> nodes;
 
 	size_t pointsX;
 	size_t pointsY;
 };
 
-Rope createRope(app2d::vec2 p1, app2d::vec2 p2)
+Rope createRope(Magnum2D::vec2 p1, Magnum2D::vec2 p2)
 {
 	Rope rope;
 
@@ -139,7 +139,7 @@ Rope createRope(app2d::vec2 p1, app2d::vec2 p2)
 	return rope;
 }
 
-Rope createRectRope(app2d::vec2 rectMin, app2d::vec2 rectMax)
+Rope createRectRope(Magnum2D::vec2 rectMin, Magnum2D::vec2 rectMax)
 {
 	Rope rope;
 
@@ -152,7 +152,7 @@ Rope createRectRope(app2d::vec2 rectMin, app2d::vec2 rectMax)
 	{
 		for (size_t y = 0; y < rope.pointsY; y++)
 		{
-			rope.positions[x * rope.pointsY + y] = app2d::vec2(rectMin.x() + x * RopeNodeDistance, rectMin.y() + y * RopeNodeDistance);
+			rope.positions[x * rope.pointsY + y] = Magnum2D::vec2(rectMin.x() + x * RopeNodeDistance, rectMin.y() + y * RopeNodeDistance);
 			rope.nodes.emplace_back(rope.positions[x * rope.pointsY + y]);
 		}
 	}
@@ -181,10 +181,10 @@ Rope createRectRope(app2d::vec2 rectMin, app2d::vec2 rectMax)
 void drawRope(Rope& rope)
 {
 	for (const auto& p : rope.positions)
-		app2d::drawCircle(p, 0.05f, app2d::rgb(0, 128, 255));
+		Magnum2D::drawCircle(p, 0.05f, Magnum2D::rgb(0, 128, 255));
 
 	std::set<const RopeNode*> visited;
-	std::vector<app2d::vec2> linePoints;
+	std::vector<Magnum2D::vec2> linePoints;
 
 	std::queue< const RopeNode*> nodes;
 	for (const RopeNode& node : rope.nodes)
@@ -212,7 +212,7 @@ void drawRope(Rope& rope)
 		}
 	}
 
-	app2d::drawLines(linePoints, app2d::rgb(0, 128, 255));
+	Magnum2D::drawLines(linePoints, Magnum2D::rgb(0, 128, 255));
 }
 
 // ---
@@ -221,7 +221,7 @@ Rope g_rope;
 
 std::vector<Rectangle> g_rectangles;
 
-void applyCollisions(app2d::vec2& from, app2d::vec2& to)
+void applyCollisions(Magnum2D::vec2& from, Magnum2D::vec2& to)
 {
 	for (auto& rect : g_rectangles)
 	{
@@ -244,7 +244,7 @@ void applyCollisions(app2d::vec2& from, app2d::vec2& to)
 
 void simmulateStep(Rope& rope)
 {
-	app2d::vec2 mousePosition = app2d::getMousePositionCamera();
+	Magnum2D::vec2 mousePosition = Magnum2D::getMousePositionCamera();
 
 	for (auto& node : rope.nodes)
 	{
@@ -252,9 +252,9 @@ void simmulateStep(Rope& rope)
 			continue;
 
 		auto move = node.position - node.positionOld;
-		app2d::vec2 acceleration = Gravity;
+		Magnum2D::vec2 acceleration = Gravity;
 
-		if (Interaction == InteractionAttract && app2d::isMouseDown())
+		if (Interaction == InteractionAttract && Magnum2D::isMouseDown())
 		{
 			acceleration += (mousePosition - node.position);
 		}
@@ -276,7 +276,7 @@ void applyConstraints(Rope& rope)
 			float im2 = node2.mass == 0.0f ? 0.0f : 1.0f / node2.mass;
 			float mult1 = im1 + im2 == 0.0f ? 0.0f : im1 / (im1 + im2), mult2 = im1 + im2 == 0.0f ? 0.0f : im2 / (im1 + im2);
 
-			app2d::vec2 diff = node1.position - node2.position;
+			Magnum2D::vec2 diff = node1.position - node2.position;
 
 			float dist = diff.length();
 			float difference = 0.0f;
@@ -291,16 +291,16 @@ void applyConstraints(Rope& rope)
 	}
 }
 
-app2d::vec2 getWindowRelative(const app2d::vec2& relative)
+Magnum2D::vec2 getWindowRelative(const Magnum2D::vec2& relative)
 {
-	auto windowSize = app2d::getWindowSize();
+	auto windowSize = Magnum2D::getWindowSize();
 
 	return { windowSize.x() * relative.x(), windowSize.y() * relative.y() };
 }
 
-app2d::vec2 getWindowRelativeCamera(const app2d::vec2& relative)
+Magnum2D::vec2 getWindowRelativeCamera(const Magnum2D::vec2& relative)
 {
-	return app2d::convertWindowToCamera(getWindowRelative(relative));
+	return Magnum2D::convertWindowToCamera(getWindowRelative(relative));
 }
 
 void setupRope()
@@ -313,16 +313,16 @@ void setupRope()
 
 void setupRectangle()
 {
-	float offset = 0.01f * app2d::getWindowSize().x();
-	app2d::vec2 min = app2d::convertWindowToCamera({ offset, offset });
-	app2d::vec2 max = getWindowRelativeCamera({ 0.08f, 0.08f });
+	float offset = 0.01f * Magnum2D::getWindowSize().x();
+	Magnum2D::vec2 min = Magnum2D::convertWindowToCamera({ offset, offset });
+	Magnum2D::vec2 max = getWindowRelativeCamera({ 0.08f, 0.08f });
 	g_rectangles.push_back(Rectangle::fromMinMax(min, max));
 }
 
 void setup()
 {
-	app2d::setCameraCenter({ 0.0f, 0.0f });
-	app2d::setCameraSize({ 32.0f, 24.0f });
+	Magnum2D::setCameraCenter({ 0.0f, 0.0f });
+	Magnum2D::setCameraSize({ 32.0f, 24.0f });
 
 	setupRope();
 	setupRectangle();
@@ -331,11 +331,11 @@ void setup()
 bool moveRect()
 {
 	static std::optional<Rectangle*> grabbedRect;
-	static app2d::vec2 grabOffset;
+	static Magnum2D::vec2 grabOffset;
 
-	if (app2d::isMousePressed())
+	if (Magnum2D::isMousePressed())
 	{
-		auto position = app2d::getMousePositionCamera();
+		auto position = Magnum2D::getMousePositionCamera();
 
 		for (auto& r : g_rectangles)
 		{
@@ -348,7 +348,7 @@ bool moveRect()
 			}
 		}
 	}
-	else if (app2d::isMouseReleased() && grabbedRect)
+	else if (Magnum2D::isMouseReleased() && grabbedRect)
 	{
 		grabbedRect.reset();
 
@@ -356,7 +356,7 @@ bool moveRect()
 	}
 	else if (grabbedRect)
 	{
-		auto position = app2d::getMousePositionCamera();
+		auto position = Magnum2D::getMousePositionCamera();
 
 		(*grabbedRect)->setCenter(position - grabOffset);
 
@@ -368,19 +368,19 @@ bool moveRect()
 
 void cutRope()
 {
-	static std::optional<app2d::vec2> cutPosition;
+	static std::optional<Magnum2D::vec2> cutPosition;
 
-	if (app2d::isMousePressed())
+	if (Magnum2D::isMousePressed())
 	{
-		cutPosition = app2d::getMousePositionCamera();
+		cutPosition = Magnum2D::getMousePositionCamera();
 	}
-	else if (app2d::isMouseReleased())
+	else if (Magnum2D::isMouseReleased())
 	{
 		cutPosition.reset();
 	}
 	else if (cutPosition)
 	{
-		auto position = app2d::getMousePositionCamera();
+		auto position = Magnum2D::getMousePositionCamera();
 
 		for (auto& node : g_rope.nodes)
 		{
@@ -396,7 +396,7 @@ void cutRope()
 	}
 }
 
-RopeNode* getClosestNode(const app2d::vec2& point)
+RopeNode* getClosestNode(const Magnum2D::vec2& point)
 {
 	float distance = std::numeric_limits<float>::max();
 	RopeNode* result = nullptr;
@@ -418,12 +418,12 @@ void grabRope()
 {
 	static std::optional<RopeNode*> grabbedNode;
 
-	if (app2d::isMousePressed())
+	if (Magnum2D::isMousePressed())
 	{
-		grabbedNode = getClosestNode(app2d::getMousePositionCamera());
+		grabbedNode = getClosestNode(Magnum2D::getMousePositionCamera());
 		(*grabbedNode)->mass = 0.0f;
 	}
-	else if (app2d::isMouseReleased())
+	else if (Magnum2D::isMouseReleased())
 	{
 		(*grabbedNode)->mass = 1.0f;
 		grabbedNode = std::nullopt;
@@ -431,7 +431,7 @@ void grabRope()
 
 	if (grabbedNode)
 	{
-		(*grabbedNode)->position = app2d::getMousePositionCamera();
+		(*grabbedNode)->position = Magnum2D::getMousePositionCamera();
 		(*grabbedNode)->positionOld = (*grabbedNode)->position;
 	}
 }
@@ -440,7 +440,7 @@ void draw()
 {
 	testWindow();
 
-	//if (app2d::isKeyDown('a') || app2d::isKeyPressed('s'))
+	//if (Magnum2D::isKeyDown('a') || Magnum2D::isKeyPressed('s'))
 	{
 		simmulateStep(g_rope);
 		for (int32_t i = 0; i < RopeConstraintIterations; i++)
@@ -450,7 +450,7 @@ void draw()
 	drawRope(g_rope);
 
 	for (auto& r : g_rectangles)
-		app2d::drawRectangle(r.center, r.size.x(), r.size.y(), app2d::rgb(50, 50, 50));
+		Magnum2D::drawRectangle(r.center, r.size.x(), r.size.y(), Magnum2D::rgb(50, 50, 50));
 
 	if (!moveRect())
 	{

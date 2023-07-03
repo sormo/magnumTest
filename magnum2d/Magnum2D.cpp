@@ -1,4 +1,4 @@
-#include "Application2D.h"
+#include "Magnum2D.h"
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Magnum/GL/Context.h>
@@ -271,7 +271,7 @@ Math::Matrix3<float> CreateTransformation(Vector2 translation, float radians, Ve
     return Math::Matrix3<float>::from(rotation.toMatrix(), translation) * Math::Matrix3<float>::scaling(scale);
 }
 
-namespace app2d
+namespace Magnum2D
 {
     col3 rgb(uint8_t r, uint8_t g, uint8_t b)
     {

@@ -4,18 +4,18 @@
 
 namespace utils
 {
-    std::vector<app2d::vec2> generatePoints(app2d::vec2 start, app2d::vec2 end, float distance)
+    std::vector<Magnum2D::vec2> generatePoints(Magnum2D::vec2 start, Magnum2D::vec2 end, float distance)
     {
-        app2d::vec2 direction = (end - start).normalized();
+        Magnum2D::vec2 direction = (end - start).normalized();
         float totalDistance = (end - start).length();
         int numPoints = std::ceilf(totalDistance / distance);
 
-        std::vector<app2d::vec2> points(numPoints);
+        std::vector<Magnum2D::vec2> points(numPoints);
 
         for (int i = 0; i < numPoints; i++)
         {
             // Calculate the position of the point
-            app2d::vec2 position = start + direction * i * distance;
+            Magnum2D::vec2 position = start + direction * i * distance;
             // If this is the last point and it's too close to the end point,
             // move it closer to the end point
             if (i == numPoints - 1 && (position - end).length() < distance / 2.0f)
@@ -29,7 +29,7 @@ namespace utils
         return points;
     }
 
-    std::optional<app2d::vec2> aabbRaycast(const app2d::vec2& p1, const app2d::vec2& p2, const app2d::vec2& rectMin, const app2d::vec2& rectMax)
+    std::optional<Magnum2D::vec2> aabbRaycast(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2, const Magnum2D::vec2& rectMin, const Magnum2D::vec2& rectMax)
     {
         // Completely outside.
         if ((p1.x() <= rectMin.x() && p2.x() <= rectMin.x()) || 
@@ -51,34 +51,34 @@ namespace utils
             // horizontal y = rectMax.y()
             x = (rectMax.y() - q) / m;
             if (x > rectMin.x() && x < rectMax.x())
-                return app2d::vec2{ x, rectMax.y() };
+                return Magnum2D::vec2{ x, rectMax.y() };
 
             // vertical x = rectMin.x()
             y = m * rectMin.x() + q;
             if (y > rectMin.y() && y < rectMax.y())
-                return app2d::vec2{ rectMin.x(), y };
+                return Magnum2D::vec2{ rectMin.x(), y };
 
             // vertical x = rectMax.x()
             y = m * rectMax.x() + q;
             if (y > rectMin.y() && y < rectMax.y())
-                return app2d::vec2{ rectMax.x(), y };
+                return Magnum2D::vec2{ rectMax.x(), y };
         }
         else if (p1.y() < rectMin.y())
         {
             // horizontal y = rectMin.y()
             x = (rectMin.y() - q) / m;
             if (x > rectMin.x() && x < rectMax.x())
-                return app2d::vec2{ x, rectMin.y() };
+                return Magnum2D::vec2{ x, rectMin.y() };
 
             // vertical x = rectMin.x()
             y = m * rectMin.x() + q;
             if (y > rectMin.y() && y < rectMax.y())
-                return app2d::vec2{ rectMin.x(), y };
+                return Magnum2D::vec2{ rectMin.x(), y };
 
             // vertical x = rectMax.x()
             y = m * rectMax.x() + q;
             if (y > rectMin.y() && y < rectMax.y())
-                return app2d::vec2{ rectMax.x(), y };
+                return Magnum2D::vec2{ rectMax.x(), y };
         }
         else
         {
@@ -88,43 +88,43 @@ namespace utils
                 // vertical x = rectMin.x()
                 y = m * rectMin.x() + q;
                 if (y > rectMin.y() && y < rectMax.y())
-                    return app2d::vec2{ rectMin.x(), y };
+                    return Magnum2D::vec2{ rectMin.x(), y };
             }
             else
             {
                 // vertical x = rectMax.x()
                 y = m * rectMax.x() + q;
                 if (y > rectMin.y() && y < rectMax.y())
-                    return app2d::vec2{ rectMax.x(), y };
+                    return Magnum2D::vec2{ rectMax.x(), y };
             }
         }
 
         //// horizontal y = rectMin.y()
         //x = (rectMin.y() - q) / m;
         //if (x > rectMin.x() && x < rectMax.x())
-        //    return app2d::vec2{ x, rectMin.y() };
+        //    return Magnum2D::vec2{ x, rectMin.y() };
 
         //// horizontal y = rectMax.y()
         //x = (rectMax.y() - q) / m;
         //if (x > rectMin.x() && x < rectMax.x())
-        //    return app2d::vec2{ x, rectMax.y() };
+        //    return Magnum2D::vec2{ x, rectMax.y() };
 
         //// vertical x = rectMin.x()
         //y = m * rectMin.x() + q;
         //if (y > rectMin.y() && y < rectMax.y())
-        //    return app2d::vec2{ rectMin.x(), y };
+        //    return Magnum2D::vec2{ rectMin.x(), y };
 
         //// vertical x = rectMax.x()
         //y = m * rectMax.x() + q;
         //if (y > rectMin.y() && y < rectMax.y())
-        //    return app2d::vec2{ rectMax.x(), y };
+        //    return Magnum2D::vec2{ rectMax.x(), y };
 
         return {};
     }
 
-    app2d::vec2 getClosestPointOnEdge(const app2d::vec2& p, const app2d::vec2& rectMin, const app2d::vec2& rectMax)
+    Magnum2D::vec2 getClosestPointOnEdge(const Magnum2D::vec2& p, const Magnum2D::vec2& rectMin, const Magnum2D::vec2& rectMax)
     {
-        std::array<std::pair<float, app2d::vec2>, 4> edges{{ { p.x() - rectMin.x(), { rectMin.x(), p.y() }},
+        std::array<std::pair<float, Magnum2D::vec2>, 4> edges{{ { p.x() - rectMin.x(), { rectMin.x(), p.y() }},
                                                              { rectMax.x() - p.x(), { rectMax.x(), p.y() }},
                                                              { p.y() - rectMin.y(), { p.x(), rectMin.y() }},
                                                              { rectMax.y() - p.y(), { p.x(), rectMax.y() }} } };
@@ -134,7 +134,7 @@ namespace utils
     }
 
     // Function to find orientation of three points
-    int orientation(const app2d::vec2& p, const app2d::vec2& q, const app2d::vec2& r)
+    int orientation(const Magnum2D::vec2& p, const Magnum2D::vec2& q, const Magnum2D::vec2& r)
     {
         float val = (q.y() - p.y()) * (r.x() - q.x()) - (q.x() - p.x()) * (r.y() - q.y());
         if (fabs(val) < 1e-9) 
@@ -143,7 +143,7 @@ namespace utils
     }
 
     // Function to check if a point lies within a line segment
-    bool isWithinSegment(const app2d::vec2& p, const app2d::vec2& q, const app2d::vec2& r)
+    bool isWithinSegment(const Magnum2D::vec2& p, const Magnum2D::vec2& q, const Magnum2D::vec2& r)
     {
         if (q.x() <= fmax(p.x(), r.x()) && q.x() >= fmin(p.x(), r.x()) && q.y() <= fmax(p.y(), r.y()) && q.y() >= fmin(p.y(), r.y()))
             return true;
@@ -151,7 +151,7 @@ namespace utils
     }
 
     // Function to check if two line segments intersect
-    bool doLineSegmentsIntersect(const app2d::vec2& p1, const app2d::vec2& q1, const app2d::vec2& p2, const app2d::vec2& q2)
+    bool doLineSegmentsIntersect(const Magnum2D::vec2& p1, const Magnum2D::vec2& q1, const Magnum2D::vec2& p2, const Magnum2D::vec2& q2)
     {
         // Find the four orientations needed for general and special cases
         int o1 = orientation(p1, q1, p2);

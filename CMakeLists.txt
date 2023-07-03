@@ -1,26 +1,24 @@
 cmake_minimum_required(VERSION 3.4)
-project(Application2D)
+project(Magnum2D)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/modules/" ${CMAKE_MODULE_PATH})
 
-# Add Corrade as a subproject
-# Add Magnum as a subproject, enable Sdl2Application
+add_subdirectory(corrade)
+add_subdirectory(magnum)
 
-if(CORRADE_TARGET_EMSCRIPTEN)
-    set(MAGNUM_WITH_EMSCRIPTENAPPLICATION ON CACHE BOOL "" FORCE)
-else()
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/SDL2-2.0.10 ${CMAKE_PREFIX_PATH})
-    set(MAGNUM_WITH_SDL2APPLICATION ON CACHE BOOL "" FORCE)
-endif()
-
-
-add_subdirectory(corrade EXCLUDE_FROM_ALL)
-add_subdirectory(magnum EXCLUDE_FROM_ALL)
-
-# Add ImGui
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
+set(MAGNUM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/magnum/src)
+set(CORRADE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/corrade/src)
+set(MAGNUM2D_DIR ${CMAKE_CURRENT_SOURCE_DIR}/magnum2d)
 set(MAGNUM_WITH_IMGUI ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum-integration EXCLUDE_FROM_ALL)
-include_directories(IMGUI_DIR)
 
-add_subdirectory(src)
+include_directories(${IMGUI_DIR})
+include_directories(${MAGNUM_DIR})
+include_directories(${CORRADE_DIR})
+include_directories(${MAGNUM2D_DIR})
+
+include_directories(${CMAKE_BINARY_DIR}/magnum/src)
+
+add_subdirectory(magnum2d)
+add_subdirectory(projects)
