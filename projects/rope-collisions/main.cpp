@@ -92,6 +92,17 @@ bool moveMovable()
 				return true;
 			}
 		}
+
+		for (auto& r : g_app->polygons)
+		{
+			if (r.IsInside(position))
+			{
+				grabbedMovable = &r;
+				grabOffset = position - r.center;
+
+				return true;
+			}
+		}
 	}
 	else if (Magnum2D::isMouseReleased() && grabbedMovable)
 	{
@@ -193,10 +204,13 @@ void draw()
 	}
 
 	for (auto& r : g_app->rectangles)
-		Magnum2D::drawRectangle(r.center, r.size.x(), r.size.y(), Magnum2D::rgb(50, 50, 50));
+		r.Draw();
 
 	for (auto& c : g_app->circles)
-		Magnum2D::drawCircle(c.center, c.radius, Magnum2D::rgb(50, 50, 50));
+		c.Draw();
+
+	for (auto& p : g_app->polygons)
+		p.Draw();
 
 	g_app->rope.Draw();
 
@@ -212,6 +226,26 @@ void draw()
 			break;
 		}
 	}
+
+	////Polygon poly({ {1,-1}, {1,1}, {0, 1.5f}, {-1, 1}, {-1, -1} });
+	//Polygon poly({ {1,-1}, {-1, -1}, {-1, 1}, {0, 1.5f}, {1,1} });
+	//poly.Draw();
+
+	////for (float x = -1.5f; x < 1.5f; x += 0.2f)
+	////{
+	////	for (float y = -2.5f; y < 2.5f; y += 0.2f)
+	////	{
+	////		Magnum2D::vec2 p(x, y);
+	////		Magnum2D::col3 c = utils::isPointInsidePolygon(p, poly.pointsMoved) ? Magnum2D::rgb(10, 10, 100) : Magnum2D::rgb(100, 10, 10);
+	////		Magnum2D::drawCircle(p, 0.1f, c);
+	////	}
+	////}
+
+	//Magnum2D::vec2 p(0.5f, 1.1f);
+	//Magnum2D::drawCircle(p, 0.1f, Magnum2D::rgb(10, 10, 100));
+
+	//auto o = utils::findClosestPointOnEdge(p, {-1.0f, 1.5f }, poly.points);
+	//Magnum2D::drawCircle(o, 0.1f, Magnum2D::rgb(100, 10, 10));
 }
 
 

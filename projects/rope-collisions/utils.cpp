@@ -188,4 +188,113 @@ namespace utils
     {
         return Magnum2D::convertWindowToCamera(getWindowRelative(relative));
     }
+
+    Magnum2D::vec2 rotate(const Magnum2D::vec2& p, float degrees)
+    {
+        float radians = degrees * 0.0174533f;
+
+        return { p.x() * std::cos(radians) - p.y() * sin(radians),  p.x() * std::sin(radians) + p.y() * cos(radians) };
+    }
+
+    struct Line {
+        Magnum2D::vec2 start;
+        Magnum2D::vec2 end;
+    };
+
+    bool isPointInsidePolygon(const Magnum2D::vec2& point, const std::vector<Magnum2D::vec2>& polygon)
+    {
+        int numIntersections = 0;
+        Line ray;
+        ray.start = point;
+        ray.end.x() = std::numeric_limits<float>::infinity(); // Extend the ray infinitely horizontally
+
+        for (size_t i = 0; i < polygon.size(); ++i)
+        {
+            const Magnum2D::vec2& p1 = polygon[i];
+            const Magnum2D::vec2& p2 = polygon[(i + 1) % polygon.size()];
+
+            if ((p1.y() > point.y() && p2.y() <= point.y()) || (p2.y() > point.y() && p1.y() <= point.y()))
+            {
+                float xIntersection = (p1.x() + (point.y() - p1.y()) / (p2.y() - p1.y()) * (p2.x() - p1.x()));
+
+                if (xIntersection > point.x())
+                    ++numIntersections;
+            }
+        }
+
+        return (numIntersections % 2 == 1);
+    }
+
+    Magnum2D::vec2 findClosestPointOnEdge(const Magnum2D::vec2& insidePoint, const std::vector<Magnum2D::vec2>& polygon)
+    {
+        float minDistance = std::numeric_limits<float>::max();
+        Magnum2D::vec2 closestPoint;
+
+        for (size_t i = 0; i < polygon.size(); ++i)
+        {
+            const Magnum2D::vec2& p1 = polygon[i];
+            const Magnum2D::vec2& p2 = polygon[(i + 1) % polygon.size()];
+
+            float dx = p2.x() - p1.x();
+            float dy = p2.y() - p1.y();
+            float l2 = dx * dx + dy * dy;
+
+            float t = std::max(0.0f, std::min(1.0f, ((insidePoint.x() - p1.x()) * dx + (insidePoint.y() - p1.y()) * dy) / l2));
+
+            float closestX = p1.x() + t * dx;
+            float closestY = p1.y() + t * dy;
+
+            float distance = std::sqrt((insidePoint.x() - closestX) * (insidePoint.x() - closestX) + (insidePoint.y() - closestY) * (insidePoint.y() - closestY));
+
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestPoint.x() = closestX;
+                closestPoint.y() = closestY;
+            }
+        }
+
+        return closestPoint;
+    }
+
+    // Function to calculate the cross product of two vectors
+    float crossProduct(const Magnum2D::vec2& a, const Magnum2D::vec2& b, const Magnum2D::vec2& c)
+    {
+        return (b.x() - a.x()) * (c.y() - a.y()) - (b.y() - a.y()) * (c.x() - a.x());
+    }
+
+    // Function to find intersection points between a line segment and a polygon
+    std::vector<Magnum2D::vec2> findIntersectionPoints(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2, const std::vector<Magnum2D::vec2>& polygon)
+    {
+        std::vector<Magnum2D::vec2> intersectionPoints;
+
+        for (int i = 0; i < polygon.size(); i++)
+        {
+            int j = (i + 1) % polygon.size();
+            Line polygonSegment = { polygon[i], polygon[j] };
+
+            if (doLineSegmentsIntersect(p1, p2, polygonSegment.start, polygonSegment.end))
+            {
+                float cp1 = crossProduct(p1, p2, polygonSegment.start);
+                float cp2 = crossProduct(p1, p2, polygonSegment.end);
+
+                if (std::abs(cp1) > 1e-9 || std::abs(cp2) > 1e-9)
+                {
+                    float t = cp1 / (cp1 - cp2);
+                    float intersectionX = polygonSegment.start.x() + (polygonSegment.end.x() - polygonSegment.start.x()) * t;
+                    float intersectionY = polygonSegment.start.y() + (polygonSegment.end.y() - polygonSegment.start.y()) * t;
+                    intersectionPoints.push_back({ intersectionX, intersectionY });
+                }
+            }
+        }
+
+        return intersectionPoints;
+    }
+
+    std::optional<Magnum2D::vec2> findClosestPointOnEdge(const Magnum2D::vec2& insidePoint, const Magnum2D::vec2& outsidePoint, const std::vector<Magnum2D::vec2>& polygon)
+    {
+        auto points = findIntersectionPoints(insidePoint, outsidePoint, polygon);
+
+        return points.empty() ? std::nullopt : std::optional<Magnum2D::vec2>(points[0]);
+    }
 }

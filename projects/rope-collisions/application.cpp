@@ -8,7 +8,9 @@ Application::Application()
 {
 	SetupRope();
 	SetupCircle();
+	SetupPolygon();
 	SetupRectangle();
+	
 }
 
 void Application::SetupRope()
@@ -23,6 +25,11 @@ void Application::SetupRectangle()
 	Magnum2D::vec2 min = Magnum2D::convertWindowToCamera({ offset, offset });
 	Magnum2D::vec2 max = utils::getWindowRelativeCamera({ 0.08f, 0.08f });
 	rectangles.push_back(Rectangle::FromMinMax(min, max));
+
+	auto rect = Rectangle::FromCenterSize({ 0.0f, -6.0f }, { 2.0f, 1.2f });
+	rect.angle = 45.0f;
+
+	rectangles.push_back(std::move(rect));
 }
 
 void Application::SetupCircle()
@@ -30,6 +37,42 @@ void Application::SetupCircle()
 	float offset = 0.06f * Magnum2D::getWindowSize().x();
 	Magnum2D::vec2 center = Magnum2D::convertWindowToCamera({ Magnum2D::getWindowSize().x() - offset, offset });
 	circles.push_back(Circle(center, 1.0f));
+}
+
+void Application::SetupPolygon()
+{
+	polygons.push_back(Polygon({ {1,-1}, {-1, -1}, {-1, 1}, {0, 1.5f}, {1,1} }));
+	polygons.push_back(Polygon({ {0, 0}, {-2, -1}, {-2, 2}, {0, 1}, {2, 2}, {2, -1} }));
+	polygons.back().SetCenter({ -3, 3 });
+}
+
+Polygon::Polygon(std::vector<Magnum2D::vec2>&& points)
+	: points(std::forward<std::vector<Magnum2D::vec2>>(points))
+{
+	pointsMoved = this->points;
+}
+
+Polygon::Polygon(const std::vector<Magnum2D::vec2>& points)
+	: points(points), pointsMoved(points)
+{
+}
+
+bool Polygon::IsInside(const Magnum2D::vec2& p) const
+{
+	return utils::isPointInsidePolygon(p, pointsMoved);
+}
+
+void Polygon::SetCenter(const Magnum2D::vec2& c)
+{
+	center = c;
+	pointsMoved = points;
+	for (auto& p : pointsMoved)
+		p += c;
+}
+
+void Polygon::Draw()
+{
+	Magnum2D::drawPolygon(pointsMoved, Magnum2D::rgb(50, 50, 50));
 }
 
 Rectangle Rectangle::FromCenterSize(const Magnum2D::vec2& center, const Magnum2D::vec2& size)
@@ -43,20 +86,50 @@ Rectangle Rectangle::FromMinMax(const Magnum2D::vec2& min, const Magnum2D::vec2&
 }
 
 Rectangle::Rectangle(const Magnum2D::vec2& center, const Magnum2D::vec2& size, const Magnum2D::vec2& min, const Magnum2D::vec2& max)
-	: center(center), size(size), min(min), max(max)
+	: center(center), size(size), hsize(size/2.0f), min(min), max(max)
 {
 }
 
 bool Rectangle::IsInside(const Magnum2D::vec2& p) const
 {
+	if (angle != 0.0f)
+	{
+		auto local = ConvertToLocal(p);
+
+		return local.x() >= -hsize.x() && local.x() <= hsize.x() && local.y() >= -hsize.y() && local.y() <= hsize.y();
+	}
+
 	return p.x() >= min.x() && p.x() <= max.x() && p.y() >= min.y() && p.y() <= max.y();
 }
 
 void Rectangle::SetCenter(const Magnum2D::vec2& c)
 {
 	center = c;
-	min = c - size / 2.0f;
-	max = c + size / 2.0f;
+	min = c - hsize;
+	max = c + hsize;
+}
+
+void Rectangle::Draw()
+{
+	Magnum2D::drawRectangle(center, angle, size.x(), size.y(), Magnum2D::rgb(50, 50, 50));
+}
+
+Magnum2D::vec2 Rectangle::ConvertToLocal(const Magnum2D::vec2& p) const
+{
+	Magnum2D::vec2 result = p - center;
+	if (angle != 0.0f)
+		return utils::rotate(result, -angle);
+	return result;
+}
+
+Magnum2D::vec2 Rectangle::ConvertToGlobal(const Magnum2D::vec2& p) const
+{
+	Magnum2D::vec2 result = p;
+
+	if (angle != 0.0f)
+		result = utils::rotate(result, angle);
+
+	return result + center;
 }
 
 Circle::Circle(const Magnum2D::vec2& center, float radius)
@@ -72,4 +145,9 @@ bool Circle::IsInside(const Magnum2D::vec2& p) const
 void Circle::SetCenter(const Magnum2D::vec2& c)
 {
 	center = c;
+}
+
+void Circle::Draw()
+{
+	Magnum2D::drawCircle(center, radius, Magnum2D::rgb(50, 50, 50));
 }

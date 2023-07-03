@@ -11,17 +11,22 @@ namespace Collisions
 			// if "from" is inside of rectangle, move it to closest edge
 			if (rect.IsInside(from))
 			{
-				auto closestPoint = utils::getClosestPointOnEdge(from, rect.min, rect.max);
+				auto localPoint = rect.ConvertToLocal(from);
+				auto closestPoint = utils::getClosestPointOnEdge(localPoint, -rect.hsize, rect.hsize);
+				auto globalPoint = rect.ConvertToGlobal(closestPoint);
 
-				from = closestPoint;
-				to = closestPoint;
+				from = globalPoint;
+				to = globalPoint;
 			}
 			// if "to" is inside, raycast from->to and get intersection with rectangle
 			else if (rect.IsInside(to))
 			{
-				if (auto p = utils::aabbRaycast(from, to, rect.min, rect.max))
+				auto localFrom = rect.ConvertToLocal(from);
+				auto localTo = rect.ConvertToLocal(to);
+				
+				if (auto p = utils::aabbRaycast(localFrom, localTo, -rect.hsize, rect.hsize))
 				{
-					to = *p;
+					to = rect.ConvertToGlobal(*p);
 					break;
 				}
 			}
@@ -47,10 +52,35 @@ namespace Collisions
 		}
 	}
 
+	void applyPolygonCollisions(Magnum2D::vec2& from, Magnum2D::vec2& to)
+	{
+		for (const auto& poly : g_app->polygons)
+		{
+			// if "from" is inside of rectangle, move it to closest edge
+			if (poly.IsInside(from))
+			{
+				auto closestPoint = utils::findClosestPointOnEdge(from, poly.pointsMoved);
+
+				from = closestPoint;
+				to = closestPoint;
+			}
+			// if "to" is inside, raycast from->to and get intersection with rectangle
+			else if (poly.IsInside(to))
+			{
+				if (auto p = utils::findClosestPointOnEdge(from, to, poly.pointsMoved))
+				{
+					to = *p;
+					break;
+				}
+			}
+		}
+	}
+
 	void applyCollisions(Magnum2D::vec2& from, Magnum2D::vec2& to)
 	{
 		applyRectangleCollisions(from, to);
 		applyCircleCollisions(from, to);
+		applyPolygonCollisions(from, to);
 	}
 
 	void applyCollisions(Magnum2D::vec2& point)
@@ -59,7 +89,11 @@ namespace Collisions
 		{
 			if (rect.IsInside(point))
 			{
-				point = utils::getClosestPointOnEdge(point, rect.min, rect.max);
+				auto localPoint = rect.ConvertToLocal(point);
+				auto closestPoint = utils::getClosestPointOnEdge(localPoint, -rect.hsize, rect.hsize);
+				auto globalPoint = rect.ConvertToGlobal(closestPoint);
+
+				point = globalPoint;
 				break;
 			}
 		}
@@ -72,5 +106,15 @@ namespace Collisions
 				break;
 			}
 		}
+
+		for (const auto& poly : g_app->polygons)
+		{
+			if (poly.IsInside(point))
+			{
+				point = utils::findClosestPointOnEdge(point, poly.pointsMoved);
+				break;
+			}
+		}
+
 	}
 }

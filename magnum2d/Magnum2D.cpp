@@ -360,7 +360,7 @@ namespace Magnum2D
 
     void drawRectangle(vec2 center, float rotation, float width, float height, col3 color)
     {
-        g_application->m_rectanle.instanceData.push_back({ CreateTransformation(center, rotation, { width / 2.0f, height / 2.0f }), color });
+        g_application->m_rectanle.instanceData.push_back({ CreateTransformation(center, rotation * 0.0174533f, { width / 2.0f, height / 2.0f }), color });
     }
 
     void drawPolygon(const std::vector<vec2>& points, col3 color)
@@ -368,7 +368,7 @@ namespace Magnum2D
         GL::Buffer vertices;
         vertices.setData({ points.data(), points.size() }, GL::BufferUsage::StaticDraw);
 
-        GL::Mesh mesh;
+        GL::Mesh mesh{ MeshPrimitive::TriangleFan };
         mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
         mesh.setCount(points.size());
 
