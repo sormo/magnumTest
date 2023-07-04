@@ -72,6 +72,10 @@ struct Application
 	void SetupRectangle();
 	void SetupPolygon();
 	
+	void Draw();
+
+	void SetupHang();
+	void DrawHang();
 };
 
 extern std::unique_ptr<Application> g_app;

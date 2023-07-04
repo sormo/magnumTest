@@ -297,4 +297,9 @@ namespace utils
 
         return points.empty() ? std::nullopt : std::optional<Magnum2D::vec2>(points[0]);
     }
+
+    float angle(const Magnum2D::vec2& p)
+    {
+        return std::atan2f(p.y(), p.x()) * 57.2958f;
+    }
 }

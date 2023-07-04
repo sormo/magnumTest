@@ -17,6 +17,9 @@ void Application::SetupRope()
 {
 	rope = Rope({ 0.0f, 10.0f }, { -14.0f, 4.0f });
 	rope.nodes[0].mass = 0.0f;
+
+	// setup the hanging object
+	SetupHang();
 }
 
 void Application::SetupRectangle()
@@ -44,6 +47,43 @@ void Application::SetupPolygon()
 	polygons.push_back(Polygon({ {1,-1}, {-1, -1}, {-1, 1}, {0, 1.5f}, {1,1} }));
 	polygons.push_back(Polygon({ {0, 0}, {-2, -1}, {-2, 2}, {0, 1}, {2, 2}, {2, -1} }));
 	polygons.back().SetCenter({ -3, 3 });
+}
+
+void Application::Draw()
+{
+	for (auto& r : rectangles)
+		r.Draw();
+
+	for (auto& c : circles)
+		c.Draw();
+
+	for (auto& p : polygons)
+		p.Draw();
+
+	rope.Draw();
+
+	DrawHang();
+}
+
+void Application::SetupHang()
+{
+	auto& parent = rope.nodes.back();
+	auto position = parent.position + Magnum2D::vec2{ 1.0f, 0.0f };
+
+	rope.nodes.emplace_back(position, 1.0f);
+	rope.nodes.back().mass = 10.0f;
+	rope.nodes.back().childs.push_back(parent);
+	parent.childs.push_back(rope.nodes.back());
+}
+
+void Application::DrawHang()
+{
+	auto& node = rope.nodes.back();
+	auto& parent = (Rope::RopeNode&)node.childs[0];
+
+	float angle = utils::angle(parent.position - node.position);
+
+	Magnum2D::drawRectangle(rope.nodes.back().position, angle, 2.0f, 2.0f, Magnum2D::rgb(34, 50, 97));
 }
 
 Polygon::Polygon(std::vector<Magnum2D::vec2>&& points)

@@ -47,6 +47,8 @@ void testWindow()
 		}
 
 		ImGui::Combo("Interaction", (int*)&Globals::Interaction, "Cut\0Grab\0Attract\0");
+
+		ImGui::SliderFloat("Hang Mass", &g_app->rope.nodes.back().mass, 1.0f, 20.0f);
 	}
 
 	ImGui::End();
@@ -203,16 +205,7 @@ void draw()
 			g_app->rope.ApplyConstraints();
 	}
 
-	for (auto& r : g_app->rectangles)
-		r.Draw();
-
-	for (auto& c : g_app->circles)
-		c.Draw();
-
-	for (auto& p : g_app->polygons)
-		p.Draw();
-
-	g_app->rope.Draw();
+	g_app->Draw();
 
 	if (!moveMovable())
 	{

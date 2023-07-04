@@ -45,7 +45,7 @@ void Rope::ApplyConstraints()
 			float dist = diff.length();
 			float difference = 0.0f;
 			if (dist > 0.0f)
-				difference = (dist - Globals::RopeNodeDistance) / dist;
+				difference = (dist - node1.distance) / dist;
 
 			diff *= 0.5f * difference;
 
@@ -54,15 +54,15 @@ void Rope::ApplyConstraints()
 		}
 	}
 
-	for (auto& p : positions)
-		Collisions::applyCollisions(p);
+	for (auto& n : nodes)
+		Collisions::applyCollisions(n.position);
 }
 
 Rope::Rope(Magnum2D::vec2 p1, Magnum2D::vec2 p2)
 {
-	positions = utils::generatePoints(p1, p2, Globals::RopeNodeDistance);
-	for (size_t i = 0; i < positions.size(); i++)
-		nodes.emplace_back(positions[i]);
+	auto points = utils::generatePoints(p1, p2, Globals::RopeNodeDistance);
+	for (size_t i = 0; i < points.size(); i++)
+		nodes.emplace_back(points[i], Globals::RopeNodeDistance);
 
 	for (size_t i = 0; i < nodes.size(); i++)
 	{
@@ -71,15 +71,12 @@ Rope::Rope(Magnum2D::vec2 p1, Magnum2D::vec2 p2)
 		if (i < nodes.size() - 1)
 			nodes[i].childs.push_back(nodes[i + 1]);
 	}
-
-	pointsX = 1;
-	pointsY = positions.size();
 }
 
 void Rope::Draw()
 {
-	for (const auto& p : positions)
-		Magnum2D::drawCircle(p, 0.05f, Magnum2D::rgb(0, 128, 255));
+	for (const auto& n : nodes)
+		Magnum2D::drawCircle(n.position, 0.05f, Magnum2D::rgb(0, 128, 255));
 
 	std::set<const RopeNode*> visited;
 	std::vector<Magnum2D::vec2> linePoints;

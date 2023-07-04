@@ -19,6 +19,7 @@ namespace utils
 	Magnum2D::vec2 getWindowRelativeCamera(const Magnum2D::vec2& relative);
 
 	Magnum2D::vec2 rotate(const Magnum2D::vec2& p, float degrees);
+	float angle(const Magnum2D::vec2& p);
 
 	bool isPointInsidePolygon(const Magnum2D::vec2& point, const std::vector<Magnum2D::vec2>& polygon);
 	Magnum2D::vec2 findClosestPointOnEdge(const Magnum2D::vec2& insidePoint, const std::vector<Magnum2D::vec2>& polygon);
