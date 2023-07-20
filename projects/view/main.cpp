@@ -28,8 +28,11 @@ void gui()
 
 		auto mousePosition = getMousePositionWindow();
 		auto mousePositionWorld = convertWindowToWorld(mousePosition);
+		auto mouseDelta = getMouseDeltaWindow();
 		ImGui::Text("Mouse Window %.1f %.1f", mousePosition.x(), mousePosition.y());
 		ImGui::Text("Mouse World %.1f %.1f", mousePositionWorld.x(), mousePositionWorld.y());
+		ImGui::Text("Mouse Window Delta %.1f %.1f", mouseDelta.x(), mouseDelta.y());
+		ImGui::Text("Mouse Scroll %.1f", getMouseScroll());
 	}
 
 	//ImGui::ShowDemoWindow();
@@ -37,9 +40,32 @@ void gui()
 	ImGui::End();
 }
 
+void cameraControl()
+{
+	if (isMouseDown())
+	{
+		auto mouseDeltaWorld = convertWindowToWorldVector(getMouseDeltaWindow());
+		auto cameraCenter = getCameraCenter();
+
+		setCameraCenter(cameraCenter - mouseDeltaWorld);
+	}
+
+	auto scrollX = getMouseScroll();
+	auto cameraSize = getCameraSize();
+	float scrollY = (cameraSize.y() / cameraSize.x()) * scrollX;
+	auto newCameraSize = getCameraSize() + vec2{ scrollX, scrollY };
+
+	if (newCameraSize.x() < 0.1f || newCameraSize.y() < 0.1f)
+		return;
+
+	setCameraSize(newCameraSize);
+}
+
 void draw()
 {
 	gui();
+
+	cameraControl();
 
 	drawCircle({ 0,0 }, 1.0f, rgb(0, 0, 255));
 }

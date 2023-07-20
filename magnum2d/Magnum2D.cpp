@@ -23,6 +23,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <chrono>
 #include <map>
 
 void setup();
@@ -93,6 +94,8 @@ public:
     Math::Vector2<float> m_windowSize;
 
     Math::Vector2<float> m_mousePosition;
+    Math::Vector2<float> m_mouseDelta;
+    Math::Vector2<float> m_mouseScroll;
 
     ImGuiIntegration::Context g_imgui{ NoCreate };
     void imguiInit();
@@ -108,6 +111,10 @@ public:
     PressedEvent m_mousePressed;
 
     std::map<char, PressedEvent> m_pressedKeys;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_startApplication;
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_startFrame;
+    float m_frameDeltaMs = 0.0f;
 };
 
 MyApplication::MyApplication(const Arguments& arguments)
@@ -126,6 +133,7 @@ MyApplication::MyApplication(const Arguments& arguments)
     m_windowSize = { (float)windowSize().x(), (float)windowSize().y() };
     m_cameraSize = m_windowSize / 40.0f;
     m_cameraProjection = Matrix3::projection(m_cameraSize);
+    m_startApplication = m_startFrame = std::chrono::high_resolution_clock::now();
 
     /* Create an instanced shader */
     auto shaderConfig = Shaders::FlatGL2D::Configuration{};
@@ -146,28 +154,42 @@ void MyApplication::drawEvent()
 {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
-    imguiDrawBegin();
-
     m_circle.instanceData.clear();
     m_circleOutline.instanceData.clear();
     m_rectanle.instanceData.clear();
     m_rectanleOutline.instanceData.clear();
+
+    // delta time
+    auto now = std::chrono::high_resolution_clock::now();
+    m_frameDeltaMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_startFrame).count();
+    m_startFrame = now;
+
+    // drawing
+
+    imguiDrawBegin();
     
     draw();
 
+    imguiDrawEnd();
+    
     m_rectanle.Draw(m_shader, m_cameraProjection);
     m_rectanleOutline.Draw(m_shader, m_cameraProjection);
     m_circle.Draw(m_shader, m_cameraProjection);
     m_circleOutline.Draw(m_shader, m_cameraProjection);
-    
-    imguiDrawEnd();
 
     swapBuffers();
     redraw();
 
+    // input stuff
+
     m_mousePressed.valueOld = m_mousePressed.valueNew;
     for (auto& v : m_pressedKeys)
         v.second.valueOld = v.second.valueNew;
+    m_mouseDelta.x() = 0;
+    m_mouseDelta.y() = 0;
+    m_mouseScroll.x() = 0;
+    m_mouseScroll.y() = 0;
+
 }
 
 void MyApplication::imguiInit()
@@ -241,10 +263,12 @@ void MyApplication::mouseReleaseEvent(MouseEvent& event)
 
 void MyApplication::mouseMoveEvent(MouseMoveEvent& event) 
 {
-    m_mousePosition.x() = event.position().x();
-    m_mousePosition.y() = event.position().y();
+    Math::Vector2<float> newMousePosition(event.position());
 
-    m_mousePosition.y() = g_application->windowSize().y() - m_mousePosition.y();
+    newMousePosition.y() = g_application->windowSize().y() - newMousePosition.y();
+
+    m_mouseDelta = newMousePosition - m_mousePosition;
+    m_mousePosition = newMousePosition;
 
     if (g_imgui.handleMouseMoveEvent(event)) return;
 }
@@ -257,6 +281,8 @@ void MyApplication::mouseScrollEvent(MouseScrollEvent& event)
         event.setAccepted();
         return;
     }
+
+    m_mouseScroll = event.offset();
 }
 
 void MyApplication::textInputEvent(TextInputEvent& event)
@@ -307,20 +333,24 @@ namespace Magnum2D
         return g_application->m_cameraSize;
     }
 
-    vec2 getMousePositionCamera()
+    vec2 getMousePositionWorld()
     {
-        return convertWindowToCamera(getMousePositionWindow());
+        return convertWindowToWorld(getMousePositionWindow());
     }
 
     vec2 getMousePositionWindow()
     {
-        //int x = 0, y = 0;
-
-        //SDL_GetMouseState(&x, &y);
-
-        //y = g_application->windowSize().y() - y;
-
         return g_application->m_mousePosition;
+    }
+
+    vec2 getMouseDeltaWindow()
+    {
+        return g_application->m_mouseDelta;
+    }
+
+    float getMouseScroll()
+    {
+        return g_application->m_mouseScroll.y();
     }
 
     vec2 convertCameraToWindow(const vec2& p)
@@ -333,7 +363,7 @@ namespace Magnum2D
         return result;
     }
 
-    vec2 convertWindowToCamera(const vec2& p)
+    vec2 convertWindowToWorld(const vec2& p)
     {
         vec2 result = -g_application->m_cameraSize / 2.0f;
         
@@ -341,6 +371,11 @@ namespace Magnum2D
         result.y() += (p.y() / g_application->m_windowSize.y()) * g_application->m_cameraSize.y() + g_application->m_cameraCenter.y();
 
         return result;
+    }
+
+    vec2 convertWindowToWorldVector(const vec2& p)
+    {
+        return { (p.x() / g_application->m_windowSize.x()) * g_application->m_cameraSize.x(), (p.y() / g_application->m_windowSize.y()) * g_application->m_cameraSize.y() };
     }
 
     void drawCircle(vec2 center, float radius, col3 color)
@@ -433,6 +468,17 @@ namespace Magnum2D
     bool isKeyDown(char key)
     {
         return g_application->m_pressedKeys.contains(key) && g_application->m_pressedKeys[key].valueNew;
+    }
+
+    float getDeltaTimeMs()
+    {
+        return g_application->m_frameDeltaMs;
+    }
+
+    float getTimeMs()
+    {
+        auto now = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(now - g_application->m_startApplication).count();
     }
 }
 

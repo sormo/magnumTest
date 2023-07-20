@@ -22,10 +22,16 @@ namespace Magnum2D
 	vec2 getCameraSize();
 
 	vec2 convertCameraToWindow(const vec2& p);
-	vec2 convertWindowToCamera(const vec2& p);
+	vec2 convertWindowToWorld(const vec2& p);
+	vec2 convertWindowToWorldVector(const vec2& p); // will not take into account translation
+
+	float getDeltaTimeMs(); // time since last frame
+	float getTimeMs(); // time since start
 
 	vec2 getMousePositionWindow();
-	vec2 getMousePositionCamera();
+	vec2 getMousePositionWorld();
+	vec2 getMouseDeltaWindow();
+	float getMouseScroll();
 	bool isMousePressed(); // true only in frame when mouse was pressed
 	bool isMouseReleased(); // true only in frame when mouse was released
 	bool isMouseDown();

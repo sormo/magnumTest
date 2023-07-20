@@ -27,7 +27,7 @@ void testWindow()
 		ImGui::Text("Canvas Size %.1f %.1f", Magnum2D::getWindowSize().x(), Magnum2D::getWindowSize().y());
 
 		auto mousePosition = Magnum2D::getMousePositionWindow();
-		auto moustPositionWorld = Magnum2D::convertWindowToCamera(mousePosition);
+		auto moustPositionWorld = Magnum2D::convertWindowToWorld(mousePosition);
 		ImGui::Text("Mouse Window %.1f %.1f", mousePosition.x(), mousePosition.y());
 		ImGui::Text("Mouse World %.1f %.1f", moustPositionWorld.x(), moustPositionWorld.y());
 	}
@@ -71,7 +71,7 @@ bool moveMovable()
 
 	if (Magnum2D::isMousePressed())
 	{
-		auto position = Magnum2D::getMousePositionCamera();
+		auto position = Magnum2D::getMousePositionWorld();
 
 		for (auto& r : g_app->rectangles)
 		{
@@ -114,7 +114,7 @@ bool moveMovable()
 	}
 	else if (grabbedMovable)
 	{
-		auto position = Magnum2D::getMousePositionCamera();
+		auto position = Magnum2D::getMousePositionWorld();
 
 		(*grabbedMovable)->SetCenter(position - grabOffset);
 
@@ -130,7 +130,7 @@ void cutRope()
 
 	if (Magnum2D::isMousePressed())
 	{
-		cutPosition = Magnum2D::getMousePositionCamera();
+		cutPosition = Magnum2D::getMousePositionWorld();
 	}
 	else if (Magnum2D::isMouseReleased())
 	{
@@ -138,7 +138,7 @@ void cutRope()
 	}
 	else if (cutPosition)
 	{
-		auto position = Magnum2D::getMousePositionCamera();
+		auto position = Magnum2D::getMousePositionWorld();
 
 		for (auto& node : g_app->rope.nodes)
 		{
@@ -178,7 +178,7 @@ void grabRope()
 
 	if (Magnum2D::isMousePressed())
 	{
-		grabbedNode = getClosestNode(Magnum2D::getMousePositionCamera());
+		grabbedNode = getClosestNode(Magnum2D::getMousePositionWorld());
 		(*grabbedNode)->mass = 0.0f;
 	}
 	else if (Magnum2D::isMouseReleased())
@@ -189,7 +189,7 @@ void grabRope()
 
 	if (grabbedNode)
 	{
-		(*grabbedNode)->position = Magnum2D::getMousePositionCamera();
+		(*grabbedNode)->position = Magnum2D::getMousePositionWorld();
 		(*grabbedNode)->positionOld = (*grabbedNode)->position;
 	}
 }

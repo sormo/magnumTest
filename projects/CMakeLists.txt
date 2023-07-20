@@ -1,3 +1,5 @@
 add_subdirectory(rope)
 add_subdirectory(rope-collisions)
 add_subdirectory(template)
+add_subdirectory(view)
+add_subdirectory(space)
