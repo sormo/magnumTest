@@ -17,7 +17,9 @@ add_executable(space main.cpp
                      utils.h
                      utils.cpp
                      point.h
-                     point.cpp)
+                     point.cpp
+                     trajectory.h
+                     trajectory.cpp)
 
 target_link_libraries(space PRIVATE Magnum2D)
 

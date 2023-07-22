@@ -12,6 +12,7 @@ namespace Magnum2D
 	col3 rgb(uint8_t r, uint8_t g, uint8_t b);
 
 	using vec2 = Magnum::Math::Vector2<float>;
+	using vec2d = Magnum::Math::Vector2<double>;
 
 	vec2 getWindowSize();
 

@@ -21,27 +21,13 @@ namespace Utils
 		return { std::cos(radians) * vector.x() - std::sin(radians) * vector.y(), std::sin(radians) * vector.x() + std::cos(radians) * vector.y() };
 	}
 
-	std::optional<vec2> DrawVector(const vec2& position, const vec2& vector, const Magnum2D::col3& color)
+	void DrawVector(const vec2& position, const vec2& vector, const Magnum2D::col3& color)
 	{
 		static const float ArrowAngle = 10 * Deg2Rad;
 		static const float ArrowSize = 0.1f;
 		static const float GrabCircleRadius = 0.3f;
 
 		vec2 destPosition = position + vector;
-		std::optional<vec2> result;
-
-		if (isMouseDown())
-		{
-			auto mousePosition = getMousePositionWorld();
-			// we can use squared length here
-			if ((mousePosition - destPosition).length() < GrabCircleRadius)
-			{
-				result = vector + convertWindowToWorldVector(getMouseDeltaWindow());
-				destPosition = position + *result;
-			}
-		}
-
-		drawCircleOutline(destPosition, GrabCircleRadius, rgb(50, 50, 50));
 		
 		drawLines({ position, destPosition }, color);
 
@@ -51,7 +37,5 @@ namespace Utils
 
 		drawLines({ destPosition, destPosition + arrowLeft }, color);
 		drawLines({ destPosition, destPosition + arrowRight }, color);
-
-		return result;
 	}
 }

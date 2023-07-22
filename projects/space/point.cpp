@@ -1,16 +1,9 @@
 #include "point.h"
-#include <algorithm>
 
 using namespace Magnum2D;
 
 float GravitationalConstant = 0.8f;
 float GravityThreshold = 10.0f;
-
-void Point::addBurn(float time, const vec2& velocity)
-{
-	burns.push_back({ time, velocity });
-	std::sort(std::begin(burns), std::end(burns), [](const Burn& a, const Burn& b) { return a.time < b.time; });
-}
 
 vec2 Point::computeAcceleration(const std::vector<PointMass>& massPoints)
 {
@@ -27,12 +20,15 @@ vec2 Point::computeAcceleration(const std::vector<PointMass>& massPoints)
 	return result;
 }
 
-std::tuple<std::vector<vec2>, std::vector<float>> Point::simulate(const std::vector<PointMass>& massPoints, float dt, float seconds, int32_t numPoints)
+std::tuple<std::vector<vec2>, std::vector<float>, std::vector<Magnum2D::vec2>> Point::simulate(const std::vector<PointMass>& massPoints, const std::vector<Burn>& burns, float dt, float seconds, int32_t numPoints)
 {
 	std::vector<vec2> points;
 	std::vector<float> times;
+	std::vector<Magnum2D::vec2> burnPositions;
 	points.reserve(numPoints);
 	times.reserve(numPoints);
+	burnPositions.reserve(burns.size());
+
 	points.push_back(position);
 	times.push_back(0.0f);
 	
@@ -47,7 +43,7 @@ std::tuple<std::vector<vec2>, std::vector<float>> Point::simulate(const std::vec
 			if (accumulatedTime >= burns[burnIndex].time)
 			{
 				addVelocity(burns[burnIndex].velocity);
-				burns[burnIndex].computedPosition = position;
+				burnPositions.push_back(position);
 				burnIndex++;
 			}
 		}
@@ -65,7 +61,7 @@ std::tuple<std::vector<vec2>, std::vector<float>> Point::simulate(const std::vec
 		}
 	}
 
-	return { points, times };
+	return { points, times, burnPositions };
 }
 
 void Point::applyForce(const vec2& force)
@@ -119,16 +115,18 @@ void PointVerlet::step(float dt)
 
 	positionOld = position;
 	position += move + dt * dt * acceleration;
+
+	lastDt = dt;
 }
 
 void PointVerlet::setVelocity(const vec2& vel)
 {
-	positionOld = position - vel;
+	positionOld = position - vel * lastDt;
 }
 
 void PointVerlet::addVelocity(const vec2& vel)
 {
-	positionOld += (position - vel);
+	positionOld = positionOld - vel * lastDt;
 }
 
 void PointVerlet::reset()

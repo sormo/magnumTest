@@ -1,26 +1,23 @@
 #include <Magnum2D.h>
 #include <imgui.h>
 #include "utils.h"
-#include "point.h"
+#include "trajectory.h"
 
 using namespace Magnum2D;
 
+float SimulationDt = 0.01f;
+float SimulationSeconds = 10.0f;
+
 const col3 Color1 = rgb(66, 135, 245);
 
-PointEuler pointEuler;
-PointEuler pointVerlet;
-PointRungeKutta pointRungeKutta;
+Trajectory trajectory;
 
-std::vector<vec2> pointEulerTrajectory;
-std::vector<float> pointEulerTimes;
+std::vector<PointMass> massPoints;
 
-std::vector<vec2> pointVerletTrajectory;
-std::vector<float> pointVerletTimes;
-
-std::vector<vec2> pointRungeKuttaTrajectory;
-std::vector<float> pointRungeKuttaTimes;
-
-std::vector<PointMass> pointMasses;
+void simulate()
+{
+	trajectory.simulate(massPoints, SimulationDt, SimulationSeconds, 60);
+}
 
 void setup()
 {
@@ -30,29 +27,15 @@ void setup()
 	{
 		PointMass m;
 		m.position = Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
-		pointMasses.push_back(std::move(m));
+		massPoints.push_back(std::move(m));
 	}
 
-	pointRungeKutta.massPoints = pointMasses;
-
-	std::tie(pointEulerTrajectory, pointEulerTimes) = pointEuler.simulate(pointMasses, 0.01f, 10.0f, 60);
-	std::tie(pointVerletTrajectory, pointVerletTimes) = pointVerlet.simulate(pointMasses, 0.01f, 10.0f, 60);
-	std::tie(pointRungeKuttaTrajectory, pointRungeKuttaTimes) = pointRungeKutta.simulate(pointMasses, 0.01f, 10.0f, 60);
+	simulate();
 
 	//pointEuler.position = vec2(5.0f, 0.0f);
 	//pointEuler.initializeCircularOrbit({ 0,0 }, centerMass);
 	//pointVerlet.position = vec2(-5.0f, 0.0f);
 	//pointVerlet.initializeCircularOrbit({ 0,0 }, centerMass);
-}
-
-void simulate()
-{
-	pointEuler.reset();
-	pointVerlet.reset();
-	pointRungeKutta.reset();
-	std::tie(pointEulerTrajectory, pointEulerTimes) = pointEuler.simulate(pointMasses, 0.01f, 10.0f, 60);
-	std::tie(pointVerletTrajectory, pointVerletTimes) = pointVerlet.simulate(pointMasses, 0.01f, 10.0f, 60);
-	std::tie(pointRungeKuttaTrajectory, pointRungeKuttaTimes) = pointRungeKutta.simulate(pointMasses, 0.01f, 10.0f, 60);
 }
 
 void gui()
@@ -84,11 +67,13 @@ void gui()
 		ImGui::Text("Mouse Scroll %.1f", getMouseScroll());
 	}
 
-	if (ImGui::CollapsingHeader("Gravity"))
+	if (ImGui::CollapsingHeader("Simulation"))
 	{
 		bool resimulate = false;
 		resimulate |= ImGui::SliderFloat("Gravity Constant", &GravitationalConstant, 0.01f, 1.0f);
 		resimulate |= ImGui::SliderFloat("Gravity Threshold", &GravityThreshold, 0.5f, 10.0f);
+		resimulate |= ImGui::SliderFloat("Simulation Dt", &SimulationDt, 0.001f, 1.0f);
+		resimulate |= ImGui::SliderFloat("Simulation Seconds", &SimulationSeconds, 10.0f, 60.0f);
 		if (resimulate)
 			simulate();
 	}
@@ -139,46 +124,28 @@ void drawCoordinateLines()
 	drawLines(points, rgb(50, 50, 50));
 }
 
-
-
 void draw()
 {
 	gui();
 
 	bool isMouseGrabbed = false;
 
-	if (!isMouseGrabbed)
+	if (trajectory.handleBurns())
 	{
-		for (size_t i = 0; i < pointEuler.burns.size(); i++)
+		isMouseGrabbed = true;
+		simulate();
+	}
+	else if (isMousePressed())
+	{
+		auto positionMouse = getMousePositionWorld();
+		for (size_t i = 0; i < trajectory.points.size(); i++)
 		{
-			if (auto newVelocity = Utils::DrawVector(pointEuler.burns[i].computedPosition, pointEuler.burns[i].velocity, rgb(255, 255, 255)))
+			if ((positionMouse - trajectory.points[i]).length() < 0.1f)
 			{
-				pointEuler.burns[i].velocity = *newVelocity;
-				pointVerlet.burns[i].velocity = *newVelocity;
-				pointRungeKutta.burns[i].velocity = *newVelocity;
+				trajectory.addBurn(trajectory.times[i], { 0.0f,0.0f });
 				simulate();
 				isMouseGrabbed = true;
 				break;
-			}
-		}
-	}
-
-	if (!isMouseGrabbed)
-	{
-		if (isMousePressed())
-		{
-			auto positionMouse = getMousePositionWorld();
-			for (size_t i = 0; i < pointEulerTrajectory.size(); i++)
-			{
-				if ((positionMouse - pointEulerTrajectory[i]).length() < 0.1f)
-				{
-					pointEuler.addBurn(pointEulerTimes[i], { 0.0f,0.0f });
-					pointVerlet.addBurn(pointEulerTimes[i], { 0.0f,0.0f });
-					pointRungeKutta.addBurn(pointEulerTimes[i], { 0.0f,0.0f });
-					simulate();
-					isMouseGrabbed = true;
-					break;
-				}
 			}
 		}
 	}
@@ -190,13 +157,11 @@ void draw()
 
 	drawCoordinateLines();
 
-	for (const auto& m : pointMasses)
+	for (const auto& m : massPoints)
 	{
 		drawCircle(m.position, 0.07f, Color1); 
 		drawCircleOutline(m.position, m.mass * GravityThreshold, rgb(50,50,50));
 	}
 
-	drawPolyline(pointEulerTrajectory, rgb(200, 0, 0));
-	drawPolyline(pointVerletTrajectory, rgb(0, 0, 200));
-	drawPolyline(pointRungeKuttaTrajectory, rgb(0, 200, 0));
+	trajectory.draw();
 }
