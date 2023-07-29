@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "point.h"
 #include "common.h"
+#include "vectorHandler.h"
 
 struct Trajectory;
 
@@ -14,7 +15,7 @@ struct BurnsHandler
 	void NewBurn(Burn* burn);
 	void Refresh();
 
-	Utils::VectorHandler vectorHandler;
+	VectorHandler vectorHandler;
 	Trajectory* trajectory;
 	std::optional<size_t> burnAddIndex;
 };

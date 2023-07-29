@@ -93,9 +93,6 @@ public:
     Math::Vector2<float> m_cameraSize;
     Math::Vector2<float> m_windowSize;
 
-    Math::Vector2<float> m_mousePosition;
-    Math::Vector2<float> m_mouseDelta;
-    Math::Vector2<float> m_mouseScroll;
 
     ImGuiIntegration::Context g_imgui{ NoCreate };
     void imguiInit();
@@ -106,10 +103,18 @@ public:
     {
         bool valueOld = false;
         bool valueNew = false;
+
+        void update()
+        {
+            valueOld = valueNew;
+        }
     };
 
-    PressedEvent m_mousePressed;
+    Math::Vector2<float> m_mousePosition;
+    Math::Vector2<float> m_mouseDelta;
+    Math::Vector2<float> m_mouseScroll;
 
+    std::map<Magnum2D::Mouse, PressedEvent> m_mousePressed;
     std::map<char, PressedEvent> m_pressedKeys;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> m_startApplication;
@@ -182,14 +187,12 @@ void MyApplication::drawEvent()
 
     // input stuff
 
-    m_mousePressed.valueOld = m_mousePressed.valueNew;
+    for (auto& v : m_mousePressed)
+        v.second.update();
     for (auto& v : m_pressedKeys)
-        v.second.valueOld = v.second.valueNew;
-    m_mouseDelta.x() = 0;
-    m_mouseDelta.y() = 0;
-    m_mouseScroll.x() = 0;
-    m_mouseScroll.y() = 0;
-
+        v.second.update();
+    m_mouseDelta.x() = 0; m_mouseDelta.y() = 0;
+    m_mouseScroll.x() = 0; m_mouseScroll.y() = 0;
 }
 
 void MyApplication::imguiInit()
@@ -247,18 +250,50 @@ void MyApplication::keyReleaseEvent(KeyEvent& event)
     m_pressedKeys[(char)event.key()] = { true, false };
 }
 
+#if defined(CORRADE_TARGET_EMSCRIPTEN)
+Magnum2D::Mouse getMouseTarget(int32_t button)
+{
+    switch (button)
+    {
+    case 0: // left
+        return Magnum2D::Mouse::left;
+    case 1: // middle
+        return Magnum2D::Mouse::middle;
+    case 2: // right
+        return Magnum2D::Mouse::right;
+    }
+    return Magnum2D::Mouse::left;
+}
+#else
+Magnum2D::Mouse getMouseTarget(int32_t button)
+{
+    switch (button)
+    {
+    case 1: // left
+        return Magnum2D::Mouse::left;
+    case 2: // middle
+        return Magnum2D::Mouse::middle;
+    case 3: // right
+        return Magnum2D::Mouse::right;
+    }
+    return Magnum2D::Mouse::left;
+}
+#endif
+
 void MyApplication::mousePressEvent(MouseEvent& event)
 {
     if (g_imgui.handleMousePressEvent(event)) return;
 
-    m_mousePressed.valueNew = true;
+    Magnum2D::Mouse target = getMouseTarget((int32_t)event.button());
+    m_mousePressed[target].valueNew = true;
 }
 
 void MyApplication::mouseReleaseEvent(MouseEvent& event)
 {
     if (g_imgui.handleMouseReleaseEvent(event)) return;
 
-    m_mousePressed.valueNew = false;
+    Magnum2D::Mouse target = getMouseTarget((int32_t)event.button());
+    m_mousePressed[target].valueNew = false;
 }
 
 void MyApplication::mouseMoveEvent(MouseMoveEvent& event) 
@@ -434,19 +469,19 @@ namespace Magnum2D
         g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
     }
 
-    bool isMousePressed()
+    bool isMousePressed(Mouse mouse)
     {
-        return g_application->m_mousePressed.valueNew && g_application->m_mousePressed.valueNew != g_application->m_mousePressed.valueOld;
+        return g_application->m_mousePressed[mouse].valueNew && g_application->m_mousePressed[mouse].valueNew != g_application->m_mousePressed[mouse].valueOld;
     }
 
-    bool isMouseReleased()
+    bool isMouseReleased(Mouse mouse)
     {
-        return !g_application->m_mousePressed.valueNew && g_application->m_mousePressed.valueNew != g_application->m_mousePressed.valueOld;
+        return !g_application->m_mousePressed[mouse].valueNew && g_application->m_mousePressed[mouse].valueNew != g_application->m_mousePressed[mouse].valueOld;
     }
 
-    bool isMouseDown()
+    bool isMouseDown(Mouse mouse)
     {
-        return g_application->m_mousePressed.valueNew;
+        return g_application->m_mousePressed[mouse].valueNew;
     }
 
     bool isKeyPressed(char key)

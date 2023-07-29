@@ -10,13 +10,13 @@ double SimulationSeconds = 10.0f;
 
 const col3 Color1 = rgb(66, 135, 245);
 
-Trajectory trajectory;
+std::vector<TrajectoryPtr> trajectories;
 
 std::vector<PointMass> massPoints;
 
-void simulate()
+void simulate(Trajectory& t)
 {
-	trajectory.simulate(massPoints, SimulationDt, SimulationSeconds, 60);
+	t.simulate(massPoints, SimulationDt, SimulationSeconds, 60);
 }
 
 void setup()
@@ -30,7 +30,14 @@ void setup()
 		massPoints.push_back(std::move(m));
 	}
 
-	simulate();
+	for (int i = 0; i < 2; i++)
+	{
+		vec2d initPos = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
+		trajectories.emplace_back(std::make_unique<Trajectory>(initPos));
+	}
+
+	for (auto& t : trajectories)
+		simulate(*t);
 
 	//pointEuler.position = vec2(5.0f, 0.0f);
 	//pointEuler.initializeCircularOrbit({ 0,0 }, centerMass);
@@ -87,7 +94,10 @@ void gui()
 		SliderDouble("Simulation Seconds", SimulationSeconds, SimulationSecondsF, 10.0, 60.0);
 
 		if (resimulate)
-			simulate();
+		{
+			for (auto& t : trajectories)
+				simulate(*t);
+		}
 	}
 
 	//ImGui::ShowDemoWindow();
@@ -140,11 +150,23 @@ void draw()
 {
 	gui();
 
-	if (auto trajectoryResult = trajectory.update(); trajectoryResult == UpdateResult::Modified)
+	bool inputGrab = false;
+
+	for (auto& t : trajectories)
 	{
-		simulate();
+		auto trajectoryResult = t->update();
+
+		switch (trajectoryResult)
+		{
+		case UpdateResult::Modified:
+			simulate(*t);
+		case UpdateResult::InputGrab:
+			inputGrab = true;
+			break;
+		}
 	}
-	else if (trajectoryResult == UpdateResult::None)
+
+	if (!inputGrab)
 	{
 		cameraControl();
 	}
@@ -157,5 +179,6 @@ void draw()
 		drawCircleOutline((vec2)m.position, m.mass * GravityThreshold, rgb(50,50,50));
 	}
 
-	trajectory.draw();
+	for (auto& t : trajectories)
+		t->draw();
 }

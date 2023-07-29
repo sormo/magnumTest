@@ -39,6 +39,14 @@ namespace Utils
 		drawLines({ destPosition, destPosition + arrowRight }, color);
 	}
 
+	void DrawCross(const Magnum2D::vec2& position, float size, const Magnum2D::col3& color)
+	{
+		float hsize = size / 2.0f;
+
+		drawLines({ position - vec2(0.0f, hsize), position + vec2(0.0f, hsize) }, color);
+		drawLines({ position - vec2(hsize, 0.0f), position + vec2(hsize, 0.0f) }, color);
+	}
+
 	float DistanceSqr(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2)
 	{
 		float dx = p1.x() - p2.x();

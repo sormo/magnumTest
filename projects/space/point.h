@@ -23,6 +23,8 @@ using BurnPtr = std::unique_ptr<Burn>;
 
 struct Point
 {
+	Point(const Magnum2D::vec2d& pos = { 0.0, 0.0 });
+
 	Magnum2D::vec2d position;
 	Magnum2D::vec2d acceleration;
 	double mass = 1.0f;
@@ -42,6 +44,8 @@ struct Point
 
 struct PointEuler : public Point
 {
+	PointEuler(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
+
 	Magnum2D::vec2d velocity;
 
 	void step(double dt) override;
@@ -52,6 +56,8 @@ struct PointEuler : public Point
 
 struct PointVerlet : public Point
 {
+	PointVerlet(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
+
 	Magnum2D::vec2d positionOld;
 	double lastDt = SimulationDt;
 
@@ -63,7 +69,7 @@ struct PointVerlet : public Point
 
 struct PointRungeKutta : public Point
 {
-	PointRungeKutta(const std::vector<PointMass>& p) : massPoints(p) {}
+	PointRungeKutta(const std::vector<PointMass>& p, const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
 
 	Magnum2D::vec2d velocity;
 	std::vector<PointMass> massPoints;

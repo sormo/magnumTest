@@ -1,15 +1,15 @@
 #pragma once
 #include "point.h"
-#include <vector>
-#include <memory>
-#include <optional>
 #include "utils.h"
 #include "common.h"
 #include "burnsHandler.h"
+#include <vector>
+#include <memory>
+#include <optional>
 
 struct Trajectory
 {
-	Trajectory();
+	Trajectory(const Magnum2D::vec2d& initPos);
 
 	UpdateResult update();
 	void draw();
@@ -20,6 +20,8 @@ struct Trajectory
 	size_t getClosestPointOnTrajectory(const Magnum2D::vec2& point);
 	size_t getPoint(double time);
 
+	Magnum2D::vec2d initialPosistion;
+
 	std::vector<Magnum2D::vec2> points;
 	std::vector<float> times;
 
@@ -29,3 +31,5 @@ struct Trajectory
 
 	BurnsHandler burnsHandler;
 };
+
+using TrajectoryPtr = std::unique_ptr<Trajectory>;

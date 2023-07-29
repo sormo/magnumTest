@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Vector2.h>
@@ -29,13 +30,14 @@ namespace Magnum2D
 	float getDeltaTimeMs(); // time since last frame
 	float getTimeMs(); // time since start
 
+	enum class Mouse { left, middle, right };
 	vec2 getMousePositionWindow();
 	vec2 getMousePositionWorld();
 	vec2 getMouseDeltaWindow();
 	float getMouseScroll();
-	bool isMousePressed(); // true only in frame when mouse was pressed
-	bool isMouseReleased(); // true only in frame when mouse was released
-	bool isMouseDown();
+	bool isMousePressed(Mouse mouse = Mouse::left); // true only in frame when mouse was pressed
+	bool isMouseReleased(Mouse mouse = Mouse::left); // true only in frame when mouse was released
+	bool isMouseDown(Mouse mouse = Mouse::left);
 
 	bool isKeyPressed(char key); // true only in frame when key was pressed
 	bool isKeyReleased(char key); // true only in frame when key was released

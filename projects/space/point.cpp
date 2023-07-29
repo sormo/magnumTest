@@ -20,6 +20,11 @@ vec2d Point::computeAcceleration(const std::vector<PointMass>& massPoints)
 	return result;
 }
 
+Point::Point(const Magnum2D::vec2d& pos)
+	: position(pos)
+{
+}
+
 std::tuple<std::vector<vec2d>, std::vector<double>> Point::simulate(const std::vector<PointMass>& massPoints, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints)
 {
 	std::vector<vec2d> points;
@@ -102,9 +107,21 @@ void PointEuler::addVelocity(const vec2d& vel)
 	velocity += vel;
 }
 
+PointEuler::PointEuler(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
+	: Point(pos)
+{
+	setVelocity(vel);
+}
+
 void PointEuler::reset()
 {
 	position = acceleration = velocity = { 0.0, 0.0 };
+}
+
+PointVerlet::PointVerlet(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
+	: Point(pos)
+{
+	setVelocity(vel);
 }
 
 void PointVerlet::step(double dt)
@@ -130,6 +147,12 @@ void PointVerlet::addVelocity(const vec2d& vel)
 void PointVerlet::reset()
 {
 	position = acceleration = positionOld = { 0.0, 0.0 };
+}
+
+PointRungeKutta::PointRungeKutta(const std::vector<PointMass>& p, const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
+	: Point(pos), massPoints(p)
+{
+	setVelocity(vel);
 }
 
 // https://gafferongames.com/post/integration_basics/

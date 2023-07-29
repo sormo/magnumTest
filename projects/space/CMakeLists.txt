@@ -22,7 +22,9 @@ add_executable(space main.cpp
                      trajectory.h
                      trajectory.cpp
                      burnsHandler.h
-                     burnsHandler.cpp)
+                     burnsHandler.cpp
+                     vectorHandler.h
+                     vectorHandler.cpp)
 
 target_link_libraries(space PRIVATE Magnum2D)
 
