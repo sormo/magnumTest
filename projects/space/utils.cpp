@@ -38,4 +38,12 @@ namespace Utils
 		drawLines({ destPosition, destPosition + arrowLeft }, color);
 		drawLines({ destPosition, destPosition + arrowRight }, color);
 	}
+
+	float DistanceSqr(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2)
+	{
+		float dx = p1.x() - p2.x();
+		float dy = p1.y() - p2.y();
+
+		return dx * dx + dy * dy;
+	}
 }

@@ -2,12 +2,12 @@
 
 using namespace Magnum2D;
 
-float GravitationalConstant = 0.8f;
-float GravityThreshold = 10.0f;
+double GravitationalConstant = 0.8;
+double GravityThreshold = 10.0;
 
-vec2 Point::computeAcceleration(const std::vector<PointMass>& massPoints)
+vec2d Point::computeAcceleration(const std::vector<PointMass>& massPoints)
 {
-	vec2 result;
+	vec2d result;
 
 	for (const auto& p : massPoints)
 	{
@@ -20,14 +20,12 @@ vec2 Point::computeAcceleration(const std::vector<PointMass>& massPoints)
 	return result;
 }
 
-std::tuple<std::vector<vec2>, std::vector<float>, std::vector<Magnum2D::vec2>> Point::simulate(const std::vector<PointMass>& massPoints, const std::vector<Burn>& burns, float dt, float seconds, int32_t numPoints)
+std::tuple<std::vector<vec2d>, std::vector<double>> Point::simulate(const std::vector<PointMass>& massPoints, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints)
 {
-	std::vector<vec2> points;
-	std::vector<float> times;
-	std::vector<Magnum2D::vec2> burnPositions;
+	std::vector<vec2d> points;
+	std::vector<double> times;
 	points.reserve(numPoints);
 	times.reserve(numPoints);
-	burnPositions.reserve(burns.size());
 
 	points.push_back(position);
 	times.push_back(0.0f);
@@ -35,15 +33,15 @@ std::tuple<std::vector<vec2>, std::vector<float>, std::vector<Magnum2D::vec2>> P
 	int32_t steps = std::ceil(seconds / dt);
 	size_t burnIndex = 0;
 	
-	float accumulatedTime = 0.0f;
+	double accumulatedTime = 0.0;
 	for (int i = 0; i < steps; i++)
 	{
 		if (burnIndex < burns.size())
 		{
-			if (accumulatedTime >= burns[burnIndex].time)
+			if (accumulatedTime >= burns[burnIndex]->time)
 			{
-				addVelocity(burns[burnIndex].velocity);
-				burnPositions.push_back(position);
+				addVelocity(burns[burnIndex]->velocity);
+				burns[burnIndex]->simulatedPosition = position;
 				burnIndex++;
 			}
 		}
@@ -53,63 +51,63 @@ std::tuple<std::vector<vec2>, std::vector<float>, std::vector<Magnum2D::vec2>> P
 		step(dt);
 
 		accumulatedTime += dt;
-		int32_t expectedPoints = accumulatedTime * (float)numPoints / seconds;
-		if (expectedPoints < points.size())
+		int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
+		//if (expectedPoints > points.size())
 		{
 			points.push_back(position);
 			times.push_back(accumulatedTime);
 		}
 	}
 
-	return { points, times, burnPositions };
+	return { points, times };
 }
 
-void Point::applyForce(const vec2& force)
+void Point::applyForce(const vec2d& force)
 {
 	acceleration += (force / mass);
 }
 
-vec2 Point::attractForce(vec2 point, float pointMass) const
+vec2d Point::attractForce(vec2d point, double pointMass) const
 {
-	vec2 dir = (point - position);
-	float distance = dir.length();
+	vec2d dir = (point - position);
+	double distance = dir.length();
 	dir = dir.normalized();
 
 	return (GravitationalConstant * pointMass * mass / (distance * distance)) * dir;
 }
 
-void Point::initializeCircularOrbit(vec2 point, float pointMass)
+void Point::initializeCircularOrbit(vec2d point, double pointMass)
 {
-	vec2 vec = point - position;
-	vec2 perpendicularDir = vec2(-vec.y(), vec.x()).normalized();
+	vec2d vec = point - position;
+	vec2d perpendicularDir = vec2d(-vec.y(), vec.x()).normalized();
 
-	float velocitySize = std::sqrtf((GravitationalConstant * pointMass) / vec.length());
+	double velocitySize = std::sqrt((GravitationalConstant * pointMass) / vec.length());
 	setVelocity(perpendicularDir * velocitySize);
 }
 
-void PointEuler::step(float dt)
+void PointEuler::step(double dt)
 {
 	// semi-implicit euler
 	velocity += acceleration * dt;
 	position += velocity * dt;
 }
 
-void PointEuler::setVelocity(const vec2& vel)
+void PointEuler::setVelocity(const vec2d& vel)
 {
 	velocity = vel;
 }
 
-void PointEuler::addVelocity(const vec2& vel)
+void PointEuler::addVelocity(const vec2d& vel)
 {
 	velocity += vel;
 }
 
 void PointEuler::reset()
 {
-	position = acceleration = velocity = { 0.0f, 0.0f };
+	position = acceleration = velocity = { 0.0, 0.0 };
 }
 
-void PointVerlet::step(float dt)
+void PointVerlet::step(double dt)
 {
 	auto move = position - positionOld;
 
@@ -119,31 +117,31 @@ void PointVerlet::step(float dt)
 	lastDt = dt;
 }
 
-void PointVerlet::setVelocity(const vec2& vel)
+void PointVerlet::setVelocity(const vec2d& vel)
 {
 	positionOld = position - vel * lastDt;
 }
 
-void PointVerlet::addVelocity(const vec2& vel)
+void PointVerlet::addVelocity(const vec2d& vel)
 {
 	positionOld = positionOld - vel * lastDt;
 }
 
 void PointVerlet::reset()
 {
-	position = acceleration = positionOld = { 0.0f, 0.0f };
+	position = acceleration = positionOld = { 0.0, 0.0 };
 }
 
 // https://gafferongames.com/post/integration_basics/
-void PointRungeKutta::step(float dt)
+void PointRungeKutta::step(double dt)
 {
 	struct Derivative
 	{
-		vec2 dpos;
-		vec2 dvel;
+		vec2d dpos;
+		vec2d dvel;
 	};
 
-	auto evaluate = [&](float dt, const Derivative& d)
+	auto evaluate = [&](double dt, const Derivative& d)
 	{
 		PointRungeKutta state = *this;
 		state.position = position + d.dpos * dt;
@@ -156,29 +154,29 @@ void PointRungeKutta::step(float dt)
 		return output;
 	};
 
-	auto a = evaluate(0.0f, {});
-	auto b = evaluate(dt * 0.5f, a);
-	auto c = evaluate(dt * 0.5f, b);
+	auto a = evaluate(0.0, {});
+	auto b = evaluate(dt * 0.5, a);
+	auto c = evaluate(dt * 0.5, b);
 	auto d = evaluate(dt, c);
 
-	vec2 dposdt = (1.0f / 6.0f) * (a.dpos + 2.0f * (b.dpos + c.dpos) + d.dpos);
-	vec2 dveldt = (1.0f / 6.0f) * (a.dvel + 2.0f * (b.dvel + c.dvel) + d.dvel);
+	vec2d dposdt = (1.0 / 6.0) * (a.dpos + 2.0 * (b.dpos + c.dpos) + d.dpos);
+	vec2d dveldt = (1.0 / 6.0) * (a.dvel + 2.0 * (b.dvel + c.dvel) + d.dvel);
 
 	position = position + dposdt * dt;
 	velocity = velocity + dveldt * dt;
 }
 
-void PointRungeKutta::setVelocity(const Magnum2D::vec2& vel)
+void PointRungeKutta::setVelocity(const vec2d& vel)
 {
 	velocity = vel;
 }
 
-void PointRungeKutta::addVelocity(const Magnum2D::vec2& vel)
+void PointRungeKutta::addVelocity(const vec2d& vel)
 {
 	velocity += vel;
 }
 
 void PointRungeKutta::reset()
 {
-	position = acceleration = velocity = { 0.0f, 0.0f };
+	position = acceleration = velocity = { 0.0, 0.0 };
 }

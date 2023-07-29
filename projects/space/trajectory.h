@@ -3,21 +3,29 @@
 #include <vector>
 #include <memory>
 #include <optional>
+#include "utils.h"
+#include "common.h"
+#include "burnsHandler.h"
 
 struct Trajectory
 {
-	void simulate(const std::vector<PointMass>& massPoints, float dt, float seconds, int32_t numPoints);
+	Trajectory();
+
+	UpdateResult update();
 	void draw();
-	void addBurn(float time, const Magnum2D::vec2& velocity);
-	bool handleBurns();
+
+	void simulate(const std::vector<PointMass>& massPoints, double dt, double seconds, int32_t numPoints);
+	void addBurn(double time, const Magnum2D::vec2& velocity);
+
+	size_t getClosestPointOnTrajectory(const Magnum2D::vec2& point);
+	size_t getPoint(double time);
 
 	std::vector<Magnum2D::vec2> points;
 	std::vector<float> times;
 
-	std::vector<Burn> burns;
-	std::vector<Magnum2D::vec2> burnPositions;
-	std::optional<size_t> grabbedBurn;
-	Magnum2D::vec2 grabOffset;
-
 	std::vector<std::vector<Magnum2D::vec2>> testPoints;
+
+	std::vector<BurnPtr> burns;
+
+	BurnsHandler burnsHandler;
 };

@@ -5,8 +5,8 @@
 
 using namespace Magnum2D;
 
-float SimulationDt = 0.01f;
-float SimulationSeconds = 10.0f;
+double SimulationDt = 0.01f;
+double SimulationSeconds = 10.0f;
 
 const col3 Color1 = rgb(66, 135, 245);
 
@@ -26,7 +26,7 @@ void setup()
 	for (int i = 0; i < 20; i++)
 	{
 		PointMass m;
-		m.position = Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
+		m.position = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
 		massPoints.push_back(std::move(m));
 	}
 
@@ -70,10 +70,22 @@ void gui()
 	if (ImGui::CollapsingHeader("Simulation"))
 	{
 		bool resimulate = false;
-		resimulate |= ImGui::SliderFloat("Gravity Constant", &GravitationalConstant, 0.01f, 1.0f);
-		resimulate |= ImGui::SliderFloat("Gravity Threshold", &GravityThreshold, 0.5f, 10.0f);
-		resimulate |= ImGui::SliderFloat("Simulation Dt", &SimulationDt, 0.001f, 1.0f);
-		resimulate |= ImGui::SliderFloat("Simulation Seconds", &SimulationSeconds, 10.0f, 60.0f);
+
+		static float GravitationalConstantF = GravitationalConstant, GravityThresholdF = GravityThreshold, SimulationDtF = SimulationDt, SimulationSecondsF = SimulationSeconds;
+		auto SliderDouble = [&](const char* name, double& target, float &tmp, double min, double max)
+		{
+			if (ImGui::SliderFloat(name, &tmp, (float)min, (float)max))
+			{
+				target = tmp;
+				resimulate = true;
+			}
+		};
+
+		SliderDouble("Gravity Constant", GravitationalConstant, GravitationalConstantF, 0.01, 1.0);
+		SliderDouble("Gravity Threshold", GravityThreshold, GravityThresholdF, 0.5, 10.0);
+		SliderDouble("Simulation Dt", SimulationDt, SimulationDtF, 0.001, 0.1);
+		SliderDouble("Simulation Seconds", SimulationSeconds, SimulationSecondsF, 10.0, 60.0);
+
 		if (resimulate)
 			simulate();
 	}
@@ -128,29 +140,11 @@ void draw()
 {
 	gui();
 
-	bool isMouseGrabbed = false;
-
-	if (trajectory.handleBurns())
+	if (auto trajectoryResult = trajectory.update(); trajectoryResult == UpdateResult::Modified)
 	{
-		isMouseGrabbed = true;
 		simulate();
 	}
-	else if (isMousePressed())
-	{
-		auto positionMouse = getMousePositionWorld();
-		for (size_t i = 0; i < trajectory.points.size(); i++)
-		{
-			if ((positionMouse - trajectory.points[i]).length() < 0.1f)
-			{
-				trajectory.addBurn(trajectory.times[i], { 0.0f,0.0f });
-				simulate();
-				isMouseGrabbed = true;
-				break;
-			}
-		}
-	}
-
-	if (!isMouseGrabbed)
+	else if (trajectoryResult == UpdateResult::None)
 	{
 		cameraControl();
 	}
@@ -159,8 +153,8 @@ void draw()
 
 	for (const auto& m : massPoints)
 	{
-		drawCircle(m.position, 0.07f, Color1); 
-		drawCircleOutline(m.position, m.mass * GravityThreshold, rgb(50,50,50));
+		drawCircle((vec2)m.position, 0.07f, Color1); 
+		drawCircleOutline((vec2)m.position, m.mass * GravityThreshold, rgb(50,50,50));
 	}
 
 	trajectory.draw();
