@@ -106,9 +106,9 @@ void gui()
 	ImGui::End();
 }
 
-void cameraControl()
+void cameraControl(bool allowMove)
 {
-	if (isMouseDown())
+	if (isMouseDown() && allowMove)
 	{
 		auto mouseDeltaWorld = convertWindowToWorldVector(getMouseDeltaWindow());
 		auto cameraCenter = getCameraCenter();
@@ -178,10 +178,7 @@ void draw()
 		}
 	}
 
-	if (!inputGrab)
-	{
-		cameraControl();
-	}
+	cameraControl(!inputGrab);
 
 	drawCoordinateLines();
 
