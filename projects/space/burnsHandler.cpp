@@ -38,7 +38,12 @@ UpdateResult BurnsHandler::Update()
 	else
 	{
 		auto positionMouse = getMousePositionWorld();
-		auto closestPoint = trajectory->getClosestPointOnTrajectory(positionMouse);
+
+		size_t closestPoint = 0;
+		if (burnAddIndex)
+			closestPoint = trajectory->getClosestPointOnTrajectoryAroundIndex(positionMouse, *burnAddIndex);
+		else
+			closestPoint = trajectory->getClosestPointOnTrajectory(positionMouse);
 
 		if ((positionMouse - trajectory->points[closestPoint]).length() < 0.1f)
 		{

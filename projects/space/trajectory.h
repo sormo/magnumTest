@@ -18,6 +18,7 @@ struct Trajectory
 	void addBurn(double time, const Magnum2D::vec2& velocity);
 
 	size_t getClosestPointOnTrajectory(const Magnum2D::vec2& point);
+	size_t getClosestPointOnTrajectoryAroundIndex(const Magnum2D::vec2& point, size_t previousIndex); // get closest point given previous index
 	size_t getPoint(double time);
 
 	Magnum2D::vec2d initialPosistion;
