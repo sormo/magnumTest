@@ -1,5 +1,6 @@
 #include "vectorHandler.h"
 #include "utils.h"
+#include "common.h"
 
 bool VectorHandler::UpdateHighlight()
 {
@@ -90,9 +91,9 @@ void VectorHandler::Draw()
 		Magnum2D::col3 circleColorTo = highlightVec && *highlightVec == i && highlightType == HandleType::To ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
 
 		Utils::DrawVector(vectors[i].from, vectors[i].to - vectors[i].from, Magnum2D::rgb(255, 255, 255));
-		Magnum2D::drawCircleOutline(vectors[i].to, GrabToRadius, circleColorTo);
-		Magnum2D::drawCircleOutline(vectors[i].from, GrabFromRadius, circleColorFrom);
-		Magnum2D::drawCircle(vectors[i].from, 0.03f, Magnum2D::rgb(10, 200, 10));
+		Magnum2D::drawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), circleColorTo);
+		Magnum2D::drawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), circleColorFrom);
+		Magnum2D::drawCircle(vectors[i].from, Common::GetZoomIndependentSize(0.03f), Magnum2D::rgb(10, 200, 10));
 	}
 }
 

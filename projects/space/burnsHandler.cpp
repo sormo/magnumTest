@@ -13,7 +13,7 @@ void BurnsHandler::Draw()
 	vectorHandler.Draw();
 
 	if (burnAddIndex)
-		drawCircle(trajectory->points[*burnAddIndex], 0.03f, rgb(200, 10, 10));
+		drawCircle(trajectory->points[*burnAddIndex], Common::GetZoomIndependentSize(0.03f), rgb(200, 10, 10));
 }
 
 UpdateResult BurnsHandler::Update()

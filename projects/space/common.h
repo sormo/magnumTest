@@ -6,3 +6,8 @@ enum class UpdateResult
 	Modified,
 	InputGrab,
 };
+
+namespace Common
+{
+	float GetZoomIndependentSize(float size);
+}

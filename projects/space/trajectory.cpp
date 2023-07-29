@@ -135,7 +135,7 @@ void Trajectory::draw()
 	drawPolyline(testPoints[0], rgb(0, 0, 200));
 	drawPolyline(testPoints[1], rgb(0, 200, 0));
 
-	Utils::DrawCross((vec2)initialPosistion, 0.3f, rgb(200, 200, 200));
+	Utils::DrawCross((vec2)initialPosistion, Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
 
 	burnsHandler.Draw();
 }

@@ -18,7 +18,10 @@ add_executable(space main.cpp
                      utils.cpp
                      point.h
                      point.cpp
+                     camera.h
+                     camera.cpp
                      common.h
+                     common.cpp
                      trajectory.h
                      trajectory.cpp
                      burnsHandler.h

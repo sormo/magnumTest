@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "common.h"
 #include <random>
 
 using namespace Magnum2D;
@@ -24,7 +25,7 @@ namespace Utils
 	void DrawVector(const vec2& position, const vec2& vector, const Magnum2D::col3& color)
 	{
 		static const float ArrowAngle = 10 * Deg2Rad;
-		static const float ArrowSize = 0.1f;
+		static const float ArrowSize = 0.2f;
 		static const float GrabCircleRadius = 0.3f;
 
 		vec2 destPosition = position + vector;
@@ -32,8 +33,8 @@ namespace Utils
 		drawLines({ position, destPosition }, color);
 
 		auto arrowDir = (-vector).normalized();
-		auto arrowLeft = RotateVector(arrowDir, ArrowAngle) * ArrowSize;
-		auto arrowRight = RotateVector(arrowDir, -ArrowAngle) * ArrowSize;
+		auto arrowLeft = RotateVector(arrowDir, ArrowAngle) * Common::GetZoomIndependentSize(ArrowSize);
+		auto arrowRight = RotateVector(arrowDir, -ArrowAngle) * Common::GetZoomIndependentSize(ArrowSize);
 
 		drawLines({ destPosition, destPosition + arrowLeft }, color);
 		drawLines({ destPosition, destPosition + arrowRight }, color);

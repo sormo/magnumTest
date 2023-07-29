@@ -1,9 +1,12 @@
 #include <Magnum2D.h>
 #include <imgui.h>
 #include "utils.h"
+#include "camera.h"
 #include "trajectory.h"
 
 using namespace Magnum2D;
+
+Camera camera;
 
 double SimulationDt = 0.01f;
 double SimulationSeconds = 10.0f;
@@ -24,6 +27,8 @@ void simulate(Trajectory& t)
 
 void setup()
 {
+	camera.Setup();
+
 	auto cameraHsize = getCameraSize() / 2.0f;
 
 	for (int i = 0; i < 20; i++)
@@ -108,27 +113,6 @@ void gui()
 	ImGui::End();
 }
 
-void cameraControl(bool allowMove)
-{
-	if (isMouseDown() && allowMove)
-	{
-		auto mouseDeltaWorld = convertWindowToWorldVector(getMouseDeltaWindow());
-		auto cameraCenter = getCameraCenter();
-
-		setCameraCenter(cameraCenter - mouseDeltaWorld);
-	}
-
-	auto scrollX = getMouseScroll();
-	auto cameraSize = getCameraSize();
-	float scrollY = (cameraSize.y() / cameraSize.x()) * scrollX;
-	auto newCameraSize = getCameraSize() + vec2{ scrollX, scrollY };
-
-	if (newCameraSize.x() < 0.1f || newCameraSize.y() < 0.1f)
-		return;
-
-	setCameraSize(newCameraSize);
-}
-
 void drawCoordinateLines()
 {
 	vec2 bottomLeft = getCameraCenter() - getCameraSize() / 2.0f;
@@ -196,7 +180,7 @@ void draw()
 		}
 	}
 
-	cameraControl(currentTrajectory == nullptr);
+	camera.Update(currentTrajectory == nullptr);
 
 	drawCoordinateLines();
 
@@ -210,9 +194,9 @@ void draw()
 	for (auto& t : trajectories)
 	{
 		if (hoverTimepoint)
-			drawCircle(t->points[*hoverTimepoint], 0.06f, rgb(50, 255, 50));
+			drawCircle(t->points[*hoverTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 255, 50));
 		if (selectTimepoint)
-			drawCircle(t->points[*selectTimepoint], 0.06f, rgb(50, 50, 255));
+			drawCircle(t->points[*selectTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 50, 255));
 	}
 
 	// draw trajectories
