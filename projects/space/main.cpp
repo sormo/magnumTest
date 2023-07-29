@@ -15,6 +15,8 @@ std::vector<PointMass> massPoints;
 std::optional<size_t> hoverTimepoint;
 std::optional<size_t> selectTimepoint;
 
+Trajectory* currentTrajectory = nullptr;
+
 void simulate(Trajectory& t)
 {
 	t.simulate(massPoints, SimulationDt, SimulationSeconds, 60);
@@ -147,23 +149,39 @@ void drawCoordinateLines()
 	drawLines(points, rgb(50, 50, 50));
 }
 
+void updateTrajectory(Trajectory* trajectory)
+{
+	auto trajectoryResult = trajectory->update();
+
+	switch (trajectoryResult)
+	{
+	case UpdateResult::Modified:
+		simulate(*trajectory);
+	case UpdateResult::InputGrab:
+		currentTrajectory = trajectory;
+		break;
+	default:
+		currentTrajectory = nullptr;
+	}
+}
+
 void draw()
 {
 	gui();
 
-	bool inputGrab = false;
-
-	for (auto& t : trajectories)
+	if (currentTrajectory)
 	{
-		auto trajectoryResult = t->update();
+		updateTrajectory(currentTrajectory);
+	}
 
-		switch (trajectoryResult)
+	if (!currentTrajectory)
+	{
+		for (auto& t : trajectories)
 		{
-		case UpdateResult::Modified:
-			simulate(*t);
-		case UpdateResult::InputGrab:
-			inputGrab = true;
-			break;
+			updateTrajectory(t.get());
+
+			if (currentTrajectory)
+				break;
 		}
 	}
 
@@ -178,7 +196,7 @@ void draw()
 		}
 	}
 
-	cameraControl(!inputGrab);
+	cameraControl(currentTrajectory == nullptr);
 
 	drawCoordinateLines();
 

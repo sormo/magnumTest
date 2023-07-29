@@ -28,8 +28,9 @@ UpdateResult BurnsHandler::Update()
 	{
 		if (burnAddIndex)
 		{
-			trajectory->addBurn(trajectory->times[*burnAddIndex], { 0.0f,0.0f });
+			trajectory->addBurn(trajectory->times[*burnAddIndex], { 0.0f, 0.0f });
 			Update(); // call recursively update to grab the input in vectorHandler, this should also return modified
+			vectorHandler.UpdateHighlight();
 
 			return UpdateResult::Modified;
 		}
