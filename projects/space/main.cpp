@@ -11,8 +11,9 @@ double SimulationSeconds = 10.0f;
 const col3 Color1 = rgb(66, 135, 245);
 
 std::vector<TrajectoryPtr> trajectories;
-
 std::vector<PointMass> massPoints;
+std::optional<size_t> hoverTimepoint;
+std::optional<size_t> selectTimepoint;
 
 void simulate(Trajectory& t)
 {
@@ -166,6 +167,17 @@ void draw()
 		}
 	}
 
+	hoverTimepoint.reset();
+	for (auto& t : trajectories)
+	{
+		if (t->burnsHandler.burnAddIndex)
+		{
+			hoverTimepoint = t->burnsHandler.burnAddIndex;
+			if (isMousePressed(Mouse::right))
+				selectTimepoint = hoverTimepoint;
+		}
+	}
+
 	if (!inputGrab)
 	{
 		cameraControl();
@@ -179,6 +191,16 @@ void draw()
 		drawCircleOutline((vec2)m.position, m.mass * GravityThreshold, rgb(50,50,50));
 	}
 
+	// draw timepoints
+	for (auto& t : trajectories)
+	{
+		if (hoverTimepoint)
+			drawCircle(t->points[*hoverTimepoint], 0.06f, rgb(50, 255, 50));
+		if (selectTimepoint)
+			drawCircle(t->points[*selectTimepoint], 0.06f, rgb(50, 50, 255));
+	}
+
+	// draw trajectories
 	for (auto& t : trajectories)
 		t->draw();
 }
