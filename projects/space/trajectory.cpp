@@ -1,5 +1,6 @@
 #include "trajectory.h"
 #include "utils.h"
+#include "common.h"
 #include <algorithm>
 #include <cassert>
 
@@ -26,11 +27,11 @@ std::vector<float> ConvertToFloat(const std::vector<double>& arr)
 }
 
 Trajectory::Trajectory(const Magnum2D::vec2d& initPos)
-	: burnsHandler(this), initialPosistion(initPos)
+	: initialPosistion(initPos)
 {
 }
 
-void Trajectory::simulate(const std::vector<PointMass>& massPoints, double dt, double seconds, int32_t numPoints)
+void Trajectory::simulate(const std::vector<MassPoint>& massPoints, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints)
 {
 	PointVerlet pointVerlet(initialPosistion);
 
@@ -44,8 +45,6 @@ void Trajectory::simulate(const std::vector<PointMass>& massPoints, double dt, d
 	testPoints.push_back(ConvertToFloat(std::get<0>(pointEuler.simulate(massPoints, burns, dt, seconds, numPoints))));
 	PointRungeKutta pointRungeKutta(massPoints, initialPosistion);
 	testPoints.push_back(ConvertToFloat(std::get<0>(pointRungeKutta.simulate(massPoints, burns, dt, seconds, numPoints))));
-
-	burnsHandler.Refresh();
 }
 
 size_t Trajectory::getClosestPointOnTrajectory(const Magnum2D::vec2& point)
@@ -124,11 +123,6 @@ size_t Trajectory::getClosestPointOnTrajectoryAroundIndex(const vec2& point, siz
 	return size_t();
 }
 
-UpdateResult Trajectory::update()
-{
-	return burnsHandler.Update();
-}
-
 void Trajectory::draw()
 {
 	drawPolyline(points, rgb(200, 0, 0));
@@ -136,8 +130,6 @@ void Trajectory::draw()
 	drawPolyline(testPoints[1], rgb(0, 200, 0));
 
 	Utils::DrawCross((vec2)initialPosistion, Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
-
-	burnsHandler.Draw();
 }
 
 size_t Trajectory::getPoint(double time)
@@ -150,16 +142,4 @@ size_t Trajectory::getPoint(double time)
 	assert(result != times.size());
 
 	return result;
-}
-
-void Trajectory::addBurn(double time, const vec2& velocity)
-{
-	burns.push_back(std::make_unique<Burn>(time, (vec2d)velocity));
-
-	burnsHandler.NewBurn(burns.back().get());
-
-	// !!! after adding burn we must simulate 
-	std::sort(std::begin(burns), std::end(burns), [](const BurnPtr& a, const BurnPtr& b) { return a->time < b->time; });
-	points.clear();
-	times.clear();
 }

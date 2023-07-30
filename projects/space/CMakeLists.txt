@@ -24,10 +24,14 @@ add_executable(space main.cpp
                      common.cpp
                      trajectory.h
                      trajectory.cpp
+                     ship.h
+                     ship.cpp
                      burnsHandler.h
                      burnsHandler.cpp
                      vectorHandler.h
-                     vectorHandler.cpp)
+                     vectorHandler.cpp
+                     celestialObject.h
+                     celestialObject.cpp)
 
 target_link_libraries(space PRIVATE Magnum2D)
 

@@ -7,11 +7,12 @@ extern double GravitationalConstant;
 extern double GravityThreshold;
 extern double SimulationDt;
 
-struct PointMass
+struct MassPoint
 {
 	Magnum2D::vec2d position;
 	double mass = 1.0;
 };
+using MassPointPtr = std::unique_ptr<MassPoint>;
 
 struct Burn
 {
@@ -34,12 +35,12 @@ struct Point
 	virtual void addVelocity(const Magnum2D::vec2d& vel) = 0;
 	virtual void reset() = 0;
 
-	std::tuple<std::vector<Magnum2D::vec2d>, std::vector<double>> simulate(const std::vector<PointMass>& points, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints);
+	std::tuple<std::vector<Magnum2D::vec2d>, std::vector<double>> simulate(const std::vector<MassPoint>& points, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints);
 
 	void applyForce(const Magnum2D::vec2d& force);
 	Magnum2D::vec2d attractForce(Magnum2D::vec2d point, double pointMass) const;
 	void initializeCircularOrbit(Magnum2D::vec2d point, double pointMass);
-	Magnum2D::vec2d computeAcceleration(const std::vector<PointMass>& massPoints);
+	Magnum2D::vec2d computeAcceleration(const std::vector<MassPoint>& massPoints);
 };
 
 struct PointEuler : public Point
@@ -69,10 +70,10 @@ struct PointVerlet : public Point
 
 struct PointRungeKutta : public Point
 {
-	PointRungeKutta(const std::vector<PointMass>& p, const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
+	PointRungeKutta(const std::vector<MassPoint>& p, const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
 
 	Magnum2D::vec2d velocity;
-	std::vector<PointMass> massPoints;
+	std::vector<MassPoint> massPoints;
 
 	void step(double dt) override;
 	void setVelocity(const Magnum2D::vec2d& vel) override;

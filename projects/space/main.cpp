@@ -2,7 +2,7 @@
 #include <imgui.h>
 #include "utils.h"
 #include "camera.h"
-#include "trajectory.h"
+#include "ship.h"
 
 using namespace Magnum2D;
 
@@ -13,16 +13,16 @@ double SimulationSeconds = 10.0f;
 
 const col3 Color1 = rgb(66, 135, 245);
 
-std::vector<TrajectoryPtr> trajectories;
-std::vector<PointMass> massPoints;
+std::vector<ShipPtr> ships;
+std::vector<MassPoint> massPoints;
 std::optional<size_t> hoverTimepoint;
 std::optional<size_t> selectTimepoint;
 
-Trajectory* currentTrajectory = nullptr;
+Ship* currentShip = nullptr;
 
-void simulate(Trajectory& t)
+void simulate(Ship& t)
 {
-	t.simulate(massPoints, SimulationDt, SimulationSeconds, 60);
+	t.Simulate(massPoints, SimulationDt, SimulationSeconds, 60);
 }
 
 void setup()
@@ -33,7 +33,7 @@ void setup()
 
 	for (int i = 0; i < 20; i++)
 	{
-		PointMass m;
+		MassPoint m;
 		m.position = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
 		massPoints.push_back(std::move(m));
 	}
@@ -41,10 +41,10 @@ void setup()
 	for (int i = 0; i < 2; i++)
 	{
 		vec2d initPos = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
-		trajectories.emplace_back(std::make_unique<Trajectory>(initPos));
+		ships.emplace_back(std::make_unique<Ship>(initPos));
 	}
 
-	for (auto& t : trajectories)
+	for (auto& t : ships)
 		simulate(*t);
 
 	//pointEuler.position = vec2(5.0f, 0.0f);
@@ -103,7 +103,7 @@ void gui()
 
 		if (resimulate)
 		{
-			for (auto& t : trajectories)
+			for (auto& t : ships)
 				simulate(*t);
 		}
 	}
@@ -133,19 +133,19 @@ void drawCoordinateLines()
 	drawLines(points, rgb(50, 50, 50));
 }
 
-void updateTrajectory(Trajectory* trajectory)
+void updateTrajectory(Ship* ship)
 {
-	auto trajectoryResult = trajectory->update();
+	auto updateResult = ship->Update();
 
-	switch (trajectoryResult)
+	switch (updateResult)
 	{
 	case UpdateResult::Modified:
-		simulate(*trajectory);
+		simulate(*ship);
 	case UpdateResult::InputGrab:
-		currentTrajectory = trajectory;
+		currentShip = ship;
 		break;
 	default:
-		currentTrajectory = nullptr;
+		currentShip = nullptr;
 	}
 }
 
@@ -153,24 +153,24 @@ void draw()
 {
 	gui();
 
-	if (currentTrajectory)
+	if (currentShip)
 	{
-		updateTrajectory(currentTrajectory);
+		updateTrajectory(currentShip);
 	}
 
-	if (!currentTrajectory)
+	if (!currentShip)
 	{
-		for (auto& t : trajectories)
+		for (auto& t : ships)
 		{
 			updateTrajectory(t.get());
 
-			if (currentTrajectory)
+			if (currentShip)
 				break;
 		}
 	}
 
 	hoverTimepoint.reset();
-	for (auto& t : trajectories)
+	for (auto& t : ships)
 	{
 		if (t->burnsHandler.burnAddIndex)
 		{
@@ -180,7 +180,7 @@ void draw()
 		}
 	}
 
-	camera.Update(currentTrajectory == nullptr);
+	camera.Update(currentShip == nullptr);
 
 	drawCoordinateLines();
 
@@ -191,15 +191,15 @@ void draw()
 	}
 
 	// draw timepoints
-	for (auto& t : trajectories)
+	for (auto& t : ships)
 	{
 		if (hoverTimepoint)
-			drawCircle(t->points[*hoverTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 255, 50));
+			drawCircle(t->trajectory.points[*hoverTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 255, 50));
 		if (selectTimepoint)
-			drawCircle(t->points[*selectTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 50, 255));
+			drawCircle(t->trajectory.points[*selectTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 50, 255));
 	}
 
-	// draw trajectories
-	for (auto& t : trajectories)
-		t->draw();
+	// draw ships
+	for (auto& t : ships)
+		t->Draw();
 }

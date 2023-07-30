@@ -5,7 +5,7 @@ using namespace Magnum2D;
 double GravitationalConstant = 0.8;
 double GravityThreshold = 10.0;
 
-vec2d Point::computeAcceleration(const std::vector<PointMass>& massPoints)
+vec2d Point::computeAcceleration(const std::vector<MassPoint>& massPoints)
 {
 	vec2d result;
 
@@ -25,7 +25,7 @@ Point::Point(const Magnum2D::vec2d& pos)
 {
 }
 
-std::tuple<std::vector<vec2d>, std::vector<double>> Point::simulate(const std::vector<PointMass>& massPoints, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints)
+std::tuple<std::vector<vec2d>, std::vector<double>> Point::simulate(const std::vector<MassPoint>& massPoints, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints)
 {
 	std::vector<vec2d> points;
 	std::vector<double> times;
@@ -149,7 +149,7 @@ void PointVerlet::reset()
 	position = acceleration = positionOld = { 0.0, 0.0 };
 }
 
-PointRungeKutta::PointRungeKutta(const std::vector<PointMass>& p, const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
+PointRungeKutta::PointRungeKutta(const std::vector<MassPoint>& p, const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
 	: Point(pos), massPoints(p)
 {
 	setVelocity(vel);

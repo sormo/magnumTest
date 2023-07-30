@@ -4,11 +4,11 @@
 #include "common.h"
 #include "vectorHandler.h"
 
-struct Trajectory;
+struct Ship;
 
 struct BurnsHandler
 {
-	BurnsHandler(Trajectory* t);
+	BurnsHandler(Ship* t);
 
 	void Draw();
 	UpdateResult Update();
@@ -16,6 +16,6 @@ struct BurnsHandler
 	void Refresh();
 
 	VectorHandler vectorHandler;
-	Trajectory* trajectory;
+	Ship* ship;
 	std::optional<size_t> burnAddIndex;
 };
