@@ -2,7 +2,8 @@
 #include <imgui.h>
 #include "utils.h"
 #include "camera.h"
-#include "ship.h"
+#include "testMassPoint.h"
+#include "testBodies.h"
 
 using namespace Magnum2D;
 
@@ -11,41 +12,12 @@ Camera camera;
 double SimulationDt = 0.01f;
 double SimulationSeconds = 10.0f;
 
-const col3 Color1 = rgb(66, 135, 245);
-
-std::vector<ShipPtr> ships;
-std::vector<MassPoint> massPoints;
-std::optional<size_t> hoverTimepoint;
-std::optional<size_t> selectTimepoint;
-
-Ship* currentShip = nullptr;
-
-void simulate(Ship& t)
-{
-	t.Simulate(massPoints, SimulationDt, SimulationSeconds, 60);
-}
-
 void setup()
 {
 	camera.Setup();
 
-	auto cameraHsize = getCameraSize() / 2.0f;
-
-	for (int i = 0; i < 20; i++)
-	{
-		MassPoint m;
-		m.position = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
-		massPoints.push_back(std::move(m));
-	}
-
-	for (int i = 0; i < 2; i++)
-	{
-		vec2d initPos = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
-		ships.emplace_back(std::make_unique<Ship>(initPos));
-	}
-
-	for (auto& t : ships)
-		simulate(*t);
+	TestMassPoint::Setup();
+	TestBodies::Setup();
 
 	//pointEuler.position = vec2(5.0f, 0.0f);
 	//pointEuler.initializeCircularOrbit({ 0,0 }, centerMass);
@@ -103,8 +75,8 @@ void gui()
 
 		if (resimulate)
 		{
-			for (auto& t : ships)
-				simulate(*t);
+			TestMassPoint::Simulate();
+			TestBodies::Simulate();
 		}
 	}
 
@@ -133,73 +105,14 @@ void drawCoordinateLines()
 	drawLines(points, rgb(50, 50, 50));
 }
 
-void updateTrajectory(Ship* ship)
-{
-	auto updateResult = ship->Update();
-
-	switch (updateResult)
-	{
-	case UpdateResult::Modified:
-		simulate(*ship);
-	case UpdateResult::InputGrab:
-		currentShip = ship;
-		break;
-	default:
-		currentShip = nullptr;
-	}
-}
-
 void draw()
 {
 	gui();
 
-	if (currentShip)
-	{
-		updateTrajectory(currentShip);
-	}
+	//bool allowCameraMove = !TestMassPoint::Update();
+	bool allowCameraMove = !TestBodies::Update();
 
-	if (!currentShip)
-	{
-		for (auto& t : ships)
-		{
-			updateTrajectory(t.get());
-
-			if (currentShip)
-				break;
-		}
-	}
-
-	hoverTimepoint.reset();
-	for (auto& t : ships)
-	{
-		if (t->burnsHandler.burnAddIndex)
-		{
-			hoverTimepoint = t->burnsHandler.burnAddIndex;
-			if (isMousePressed(Mouse::right))
-				selectTimepoint = hoverTimepoint;
-		}
-	}
-
-	camera.Update(currentShip == nullptr);
+	camera.Update(allowCameraMove);
 
 	drawCoordinateLines();
-
-	for (const auto& m : massPoints)
-	{
-		drawCircle((vec2)m.position, 0.07f, Color1); 
-		drawCircleOutline((vec2)m.position, m.mass * GravityThreshold, rgb(50,50,50));
-	}
-
-	// draw timepoints
-	for (auto& t : ships)
-	{
-		if (hoverTimepoint)
-			drawCircle(t->trajectory.points[*hoverTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 255, 50));
-		if (selectTimepoint)
-			drawCircle(t->trajectory.points[*selectTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 50, 255));
-	}
-
-	// draw ships
-	for (auto& t : ships)
-		t->Draw();
 }

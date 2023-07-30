@@ -18,6 +18,8 @@ add_executable(space main.cpp
                      utils.cpp
                      point.h
                      point.cpp
+                     simulation.h
+                     simulation.cpp
                      camera.h
                      camera.cpp
                      common.h
@@ -31,7 +33,9 @@ add_executable(space main.cpp
                      vectorHandler.h
                      vectorHandler.cpp
                      celestialObject.h
-                     celestialObject.cpp)
+                     celestialObject.cpp
+                     testMassPoint.h
+                     testBodies.h)
 
 target_link_libraries(space PRIVATE Magnum2D)
 

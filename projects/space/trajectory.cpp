@@ -1,6 +1,7 @@
 #include "trajectory.h"
 #include "utils.h"
 #include "common.h"
+#include "simulation.h"
 #include <algorithm>
 #include <cassert>
 
@@ -24,27 +25,6 @@ std::vector<float> ConvertToFloat(const std::vector<double>& arr)
 	for (const auto& e : arr)
 		result.push_back(e);
 	return result;
-}
-
-Trajectory::Trajectory(const Magnum2D::vec2d& initPos)
-	: initialPosistion(initPos)
-{
-}
-
-void Trajectory::simulate(const std::vector<MassPoint>& massPoints, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints)
-{
-	PointVerlet pointVerlet(initialPosistion);
-
-	auto [pointsd, timesd ] = pointVerlet.simulate(massPoints, burns, dt, seconds, numPoints);
-
-	points = ConvertToFloat(pointsd);
-	times = ConvertToFloat(timesd);
-
-	testPoints.clear();
-	PointEuler pointEuler(initialPosistion);
-	testPoints.push_back(ConvertToFloat(std::get<0>(pointEuler.simulate(massPoints, burns, dt, seconds, numPoints))));
-	PointRungeKutta pointRungeKutta(massPoints, initialPosistion);
-	testPoints.push_back(ConvertToFloat(std::get<0>(pointRungeKutta.simulate(massPoints, burns, dt, seconds, numPoints))));
 }
 
 size_t Trajectory::getClosestPointOnTrajectory(const Magnum2D::vec2& point)
@@ -123,13 +103,11 @@ size_t Trajectory::getClosestPointOnTrajectoryAroundIndex(const vec2& point, siz
 	return size_t();
 }
 
-void Trajectory::draw()
+void Trajectory::draw(col3 color)
 {
-	drawPolyline(points, rgb(200, 0, 0));
-	drawPolyline(testPoints[0], rgb(0, 0, 200));
-	drawPolyline(testPoints[1], rgb(0, 200, 0));
+	drawPolyline(points, color);
 
-	Utils::DrawCross((vec2)initialPosistion, Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
+	Utils::DrawCross(points[0], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
 }
 
 size_t Trajectory::getPoint(double time)

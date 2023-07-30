@@ -5,10 +5,11 @@
 #include "vectorHandler.h"
 
 struct Ship;
+struct Trajectory;
 
 struct BurnsHandler
 {
-	BurnsHandler(Ship* t);
+	BurnsHandler(Ship* s, Trajectory* t);
 
 	void Draw();
 	UpdateResult Update();
@@ -17,5 +18,6 @@ struct BurnsHandler
 
 	VectorHandler vectorHandler;
 	Ship* ship;
+	Trajectory* trajectory;
 	std::optional<size_t> burnAddIndex;
 };

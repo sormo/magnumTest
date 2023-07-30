@@ -5,6 +5,11 @@ using namespace Magnum2D;
 double GravitationalConstant = 0.8;
 double GravityThreshold = 10.0;
 
+Point::Point(const Magnum2D::vec2d& pos)
+{
+	position = pos;
+}
+
 vec2d Point::computeAcceleration(const std::vector<MassPoint>& massPoints)
 {
 	vec2d result;
@@ -18,53 +23,6 @@ vec2d Point::computeAcceleration(const std::vector<MassPoint>& massPoints)
 	}
 
 	return result;
-}
-
-Point::Point(const Magnum2D::vec2d& pos)
-	: position(pos)
-{
-}
-
-std::tuple<std::vector<vec2d>, std::vector<double>> Point::simulate(const std::vector<MassPoint>& massPoints, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints)
-{
-	std::vector<vec2d> points;
-	std::vector<double> times;
-	points.reserve(numPoints);
-	times.reserve(numPoints);
-
-	points.push_back(position);
-	times.push_back(0.0f);
-	
-	int32_t steps = std::ceil(seconds / dt);
-	size_t burnIndex = 0;
-	
-	double accumulatedTime = 0.0;
-	for (int i = 0; i < steps; i++)
-	{
-		if (burnIndex < burns.size())
-		{
-			if (accumulatedTime >= burns[burnIndex]->time)
-			{
-				addVelocity(burns[burnIndex]->velocity);
-				burns[burnIndex]->simulatedPosition = position;
-				burnIndex++;
-			}
-		}
-
-		acceleration = computeAcceleration(massPoints);
-
-		step(dt);
-
-		accumulatedTime += dt;
-		int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
-		//if (expectedPoints > points.size())
-		{
-			points.push_back(position);
-			times.push_back(accumulatedTime);
-		}
-	}
-
-	return { points, times };
 }
 
 void Point::applyForce(const vec2d& force)

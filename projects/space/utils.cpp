@@ -17,6 +17,11 @@ namespace Utils
 		return { (float)distx(g_rand), (float)disty(g_rand) };
 	}
 
+	col3 GetRandomColor()
+	{
+		return rgb(rand() % 255, rand() % 255 , rand() % 255);
+	}
+
 	Magnum2D::vec2 RotateVector(const Magnum2D::vec2& vector, float radians)
 	{
 		return { std::cos(radians) * vector.x() - std::sin(radians) * vector.y(), std::sin(radians) * vector.x() + std::cos(radians) * vector.y() };
@@ -46,6 +51,24 @@ namespace Utils
 
 		drawLines({ position - vec2(0.0f, hsize), position + vec2(0.0f, hsize) }, color);
 		drawLines({ position - vec2(hsize, 0.0f), position + vec2(hsize, 0.0f) }, color);
+	}
+
+	std::vector<vec2> ConvertToFloat(const std::vector<vec2d>& arr)
+	{
+		std::vector<vec2> result;
+		result.reserve(arr.size());
+		for (const auto& e : arr)
+			result.push_back((vec2)e);
+		return result;
+	}
+
+	std::vector<float> ConvertToFloat(const std::vector<double>& arr)
+	{
+		std::vector<float> result;
+		result.reserve(arr.size());
+		for (const auto& e : arr)
+			result.push_back(e);
+		return result;
 	}
 
 	float DistanceSqr(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2)

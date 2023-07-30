@@ -13,7 +13,11 @@ struct Ship
 	UpdateResult Update();
 	void Simulate(const std::vector<MassPoint>& massPoints, double dt, double seconds, int32_t numPoints);
 
-	Trajectory trajectory;
+	Magnum2D::vec2 initialPosition;
+
+	Trajectory trajectoryEuler;
+	Trajectory trajectoryVerlet;
+	Trajectory trajectoryRungeKuta;
 	std::vector<BurnPtr> burns;
 	BurnsHandler burnsHandler;
 };

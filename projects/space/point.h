@@ -12,7 +12,6 @@ struct MassPoint
 	Magnum2D::vec2d position;
 	double mass = 1.0;
 };
-using MassPointPtr = std::unique_ptr<MassPoint>;
 
 struct Burn
 {
@@ -22,20 +21,16 @@ struct Burn
 };
 using BurnPtr = std::unique_ptr<Burn>;
 
-struct Point
+struct Point : public MassPoint
 {
 	Point(const Magnum2D::vec2d& pos = { 0.0, 0.0 });
 
-	Magnum2D::vec2d position;
 	Magnum2D::vec2d acceleration;
-	double mass = 1.0f;
 
 	virtual void step(double dt) = 0;
 	virtual void setVelocity(const Magnum2D::vec2d& vel) = 0;
 	virtual void addVelocity(const Magnum2D::vec2d& vel) = 0;
 	virtual void reset() = 0;
-
-	std::tuple<std::vector<Magnum2D::vec2d>, std::vector<double>> simulate(const std::vector<MassPoint>& points, const std::vector<BurnPtr>& burns, double dt, double seconds, int32_t numPoints);
 
 	void applyForce(const Magnum2D::vec2d& force);
 	Magnum2D::vec2d attractForce(Magnum2D::vec2d point, double pointMass) const;
