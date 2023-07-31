@@ -93,6 +93,7 @@ public:
     Math::Vector2<float> m_cameraSize;
     Math::Vector2<float> m_windowSize;
 
+    void setupCamera();
 
     ImGuiIntegration::Context g_imgui{ NoCreate };
     void imguiInit();
@@ -122,22 +123,30 @@ public:
     float m_frameDeltaMs = 0.0f;
 };
 
+Platform::Application::Configuration CreateConfiguration()
+{
+    Platform::Application::Configuration result;
+
+    result.setTitle("Application2D");
+    result.addWindowFlags(Platform::Application::Configuration::WindowFlags::Type::Resizable);
+
+    return result;
+}
+
 MyApplication::MyApplication(const Arguments& arguments)
-    : Platform::Application{arguments}, 
+    : Platform::Application{arguments, CreateConfiguration()},
       m_circle(Primitives::circle2DSolid(60)),
       m_circleOutline(Primitives::circle2DWireframe(60)),
       m_rectanle(Primitives::squareSolid()),
       m_rectanleOutline(Primitives::squareWireframe())
 {
 #if !defined(CORRADE_TARGET_EMSCRIPTEN) && !defined(CORRADE_TARGET_IOS)
-    setWindowTitle("Application2D");
     setSwapInterval(0);
 #endif
     g_application = this;
 
-    m_windowSize = { (float)windowSize().x(), (float)windowSize().y() };
-    m_cameraSize = m_windowSize / 40.0f;
-    m_cameraProjection = Matrix3::projection(m_cameraSize);
+    setupCamera();
+
     m_startApplication = m_startFrame = std::chrono::high_resolution_clock::now();
 
     /* Create an instanced shader */
@@ -221,11 +230,20 @@ void MyApplication::imguiDrawEnd()
    g_imgui.drawFrame();
 }
 
+void MyApplication::setupCamera()
+{
+    m_windowSize = { (float)windowSize().x(), (float)windowSize().y() };
+    m_cameraSize = m_windowSize / 40.0f;
+    m_cameraProjection = Matrix3::projection(m_cameraSize);
+}
+
 void MyApplication::viewportEvent(ViewportEvent& event)
 {
     GL::defaultFramebuffer.setViewport({ {}, event.framebufferSize() });
 
     g_imgui.relayout(Vector2{ event.windowSize() } / event.dpiScaling(), event.windowSize(), event.framebufferSize());
+
+    setupCamera();
 }
 
 
