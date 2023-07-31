@@ -20,7 +20,7 @@ void Ship::Simulate(const std::vector<MassPoint>& massPoints, double dt, double 
 {
 	std::tie(trajectoryEuler.points, trajectoryEuler.times) = SimulateHelper(PointEuler((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
 	std::tie(trajectoryVerlet.points, trajectoryVerlet.times) = SimulateHelper(PointVerlet((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
-	std::tie(trajectoryRungeKuta.points, trajectoryRungeKuta.times) = SimulateHelper(PointRungeKutta(massPoints, (vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
+	std::tie(trajectoryRungeKuta.points, trajectoryRungeKuta.times) = SimulateHelper(PointRungeKutta((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
 
 	burnsHandler.Refresh();
 }

@@ -10,21 +10,6 @@ Point::Point(const Magnum2D::vec2d& pos)
 	position = pos;
 }
 
-vec2d Point::computeAcceleration(const std::vector<MassPoint>& massPoints)
-{
-	vec2d result;
-
-	for (const auto& p : massPoints)
-	{
-		if ((p.position - position).length() > mass * GravityThreshold)
-			continue;
-
-		result += attractForce(p.position, p.mass) / mass;
-	}
-
-	return result;
-}
-
 void Point::applyForce(const vec2d& force)
 {
 	acceleration += (force / mass);
@@ -32,8 +17,13 @@ void Point::applyForce(const vec2d& force)
 
 vec2d Point::attractForce(vec2d point, double pointMass) const
 {
+	// TODO optimize square length
 	vec2d dir = (point - position);
 	double distance = dir.length();
+
+	if (distance == 0.0)
+		return {};
+
 	dir = dir.normalized();
 
 	return (GravitationalConstant * pointMass * mass / (distance * distance)) * dir;
@@ -107,8 +97,8 @@ void PointVerlet::reset()
 	position = acceleration = positionOld = { 0.0, 0.0 };
 }
 
-PointRungeKutta::PointRungeKutta(const std::vector<MassPoint>& p, const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
-	: Point(pos), massPoints(p)
+PointRungeKutta::PointRungeKutta(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
+	: Point(pos)
 {
 	setVelocity(vel);
 }
@@ -116,33 +106,6 @@ PointRungeKutta::PointRungeKutta(const std::vector<MassPoint>& p, const Magnum2D
 // https://gafferongames.com/post/integration_basics/
 void PointRungeKutta::step(double dt)
 {
-	struct Derivative
-	{
-		vec2d dpos;
-		vec2d dvel;
-	};
-
-	auto evaluate = [&](double dt, const Derivative& d)
-	{
-		PointRungeKutta state = *this;
-		state.position = position + d.dpos * dt;
-		state.velocity = velocity + d.dvel * dt;
-
-		Derivative output;
-		output.dpos = state.velocity;
-		output.dvel = state.computeAcceleration(massPoints);
-
-		return output;
-	};
-
-	auto a = evaluate(0.0, {});
-	auto b = evaluate(dt * 0.5, a);
-	auto c = evaluate(dt * 0.5, b);
-	auto d = evaluate(dt, c);
-
-	vec2d dposdt = (1.0 / 6.0) * (a.dpos + 2.0 * (b.dpos + c.dpos) + d.dpos);
-	vec2d dveldt = (1.0 / 6.0) * (a.dvel + 2.0 * (b.dvel + c.dvel) + d.dvel);
-
 	position = position + dposdt * dt;
 	velocity = velocity + dveldt * dt;
 }

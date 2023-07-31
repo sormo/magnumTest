@@ -51,16 +51,7 @@ namespace Simulation
 			// update accelerations
 			for (size_t j = 0; j < points.size(); j++)
 			{
-				vec2d acc;
-				for (size_t k = 0; k < points.size(); k++)
-				{
-					if (j == k)
-						continue;
-
-					acc += points[j].attractForce(points[k].position, points[k].mass) / points[j].mass;
-				}
-				points[j].acceleration = acc;
-
+				points[j].prepareStep(points, dt, j);
 			}
 
 			// update velocities and positions
@@ -72,7 +63,7 @@ namespace Simulation
 			accumulatedTime += dt;
 
 			// update trajectories
-			int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
+			//int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
 			//if (expectedPoints > points.size())
 			{
 				for (size_t j = 0; j < points.size(); j++)
@@ -114,12 +105,12 @@ namespace Simulation
 				}
 			}
 
-			point.acceleration = point.computeAcceleration(massPoints);
+			point.prepareStep(massPoints, dt);
 
 			point.step(dt);
 
 			accumulatedTime += dt;
-			int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
+			//int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
 			//if (expectedPoints > points.size())
 			{
 				points.push_back(point.position);

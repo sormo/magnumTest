@@ -15,6 +15,8 @@ namespace TestBodies
 	std::vector<Trajectory> trajectoriesEuler;
 	std::vector<PointVerlet> pointsVerlet;
 	std::vector<Trajectory> trajectoriesVerlet;
+	std::vector<PointRungeKutta> pointsRungeKutta;
+	std::vector<Trajectory> trajectoriesRungeKutta;
 	std::vector<col3> colors;
 
 	void Simulate()
@@ -26,6 +28,9 @@ namespace TestBodies
 
 		auto localVerlet = pointsVerlet;
 		trajectoriesVerlet = Simulation::Simulate(localVerlet, burns, SimulationDt, SimulationSeconds, 60);
+
+		auto localRungeKutta = pointsRungeKutta;
+		trajectoriesRungeKutta = Simulation::Simulate(localRungeKutta, burns, SimulationDt, SimulationSeconds, 60);
 	}
 
 	void Setup()
@@ -41,6 +46,7 @@ namespace TestBodies
 
 			pointsEuler.emplace_back(position, velocity);
 			pointsVerlet.emplace_back(position, velocity);
+			pointsRungeKutta.emplace_back(position, velocity);
 			colors.push_back(Utils::GetRandomColor());
 		}
 
@@ -53,7 +59,10 @@ namespace TestBodies
 			trajectoriesEuler[i].draw(rgb(50, 50, 50));
 
 		for (size_t i = 0; i < trajectoriesVerlet.size(); i++)
-			trajectoriesVerlet[i].draw(colors[i]);
+			trajectoriesVerlet[i].draw(rgb(100, 100, 100));
+
+		for (size_t i = 0; i < trajectoriesRungeKutta.size(); i++)
+			trajectoriesRungeKutta[i].draw(colors[i]);
 
 		return false;
 	}
