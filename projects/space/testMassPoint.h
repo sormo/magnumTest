@@ -4,10 +4,11 @@
 #include <optional>
 
 extern double SimulationDt;
-extern double SimulationSeconds;
 
 namespace TestMassPoint
 {
+	double SimulationSeconds;
+
 	using namespace Magnum2D;
 
 	static std::vector<ShipPtr> ships;

@@ -5,7 +5,6 @@
 #include "simulation.h"
 
 extern double SimulationDt;
-extern double SimulationSeconds;
 
 namespace TestBodies
 {
@@ -24,13 +23,13 @@ namespace TestBodies
 		std::vector<std::vector<BurnPtr>> burns(pointsEuler.size());
 
 		auto localEuler = pointsEuler;
-		trajectoriesEuler = Simulation::Simulate(localEuler, burns, SimulationDt, SimulationSeconds, 60);
+		trajectoriesEuler = Simulation::Simulate(localEuler, burns, SimulationDt, 60, 60);
 
 		auto localVerlet = pointsVerlet;
-		trajectoriesVerlet = Simulation::Simulate(localVerlet, burns, SimulationDt, SimulationSeconds, 60);
+		trajectoriesVerlet = Simulation::Simulate(localVerlet, burns, SimulationDt, 60, 60);
 
 		auto localRungeKutta = pointsRungeKutta;
-		trajectoriesRungeKutta = Simulation::Simulate(localRungeKutta, burns, SimulationDt, SimulationSeconds, 60);
+		trajectoriesRungeKutta = Simulation::Simulate(localRungeKutta, burns, SimulationDt, 60, 60);
 	}
 
 	void Setup()
