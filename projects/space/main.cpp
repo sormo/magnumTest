@@ -11,13 +11,16 @@ Camera camera;
 
 double SimulationDt = 0.01f;
 extern double TestMassPoint::SimulationSeconds = 10.0f;
+extern float TestBodies::SimulatedSeconds;
+extern bool TestBodies::IsPlaying;
 
 enum TestType : int32_t
 {
 	MassPoints,
 	Bodies
 
-} CurrentTest;
+};
+TestType CurrentTest = TestType::Bodies;
 
 void setup()
 {
@@ -108,6 +111,15 @@ void gui()
 			}
 			if (ImGui::BeginTabItem("Bodies"))
 			{
+				ImGui::Text("Simulated Seconds: %.1f", TestBodies::SimulatedSeconds);
+				ImGui::SameLine();
+				if (ImGui::Button("Simulate"))
+					TestBodies::Simulate(10.0); 
+				ImGui::SameLine();
+				ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
+
+				ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds);
+
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();
@@ -140,6 +152,7 @@ void drawCoordinateLines()
 
 void draw()
 {
+	drawCoordinateLines();
 	gui();
 
 	bool allowCameraMove = true;
@@ -156,5 +169,4 @@ void draw()
 
 	camera.Update(allowCameraMove);
 
-	drawCoordinateLines();
 }

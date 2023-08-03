@@ -103,6 +103,16 @@ size_t Trajectory::getClosestPointOnTrajectoryAroundIndex(const vec2& point, siz
 	return size_t();
 }
 
+void Trajectory::draw(double fromTime, double toTime, Magnum2D::col3 color)
+{
+	auto fromIndex = getPoint(fromTime);
+	auto toIndex = getPoint(toTime);
+
+	drawPolyline(std::span(std::begin(points) + fromIndex, toIndex - fromIndex), color);
+
+	Utils::DrawCross(points[fromIndex], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
+}
+
 void Trajectory::draw(col3 color)
 {
 	drawPolyline(points, color);
@@ -120,4 +130,13 @@ size_t Trajectory::getPoint(double time)
 	assert(result != times.size());
 
 	return result;
+}
+
+void Trajectory::extend(Trajectory&& trajectory)
+{
+	points.reserve(points.size() + trajectory.points.size());
+	points.insert(points.end(), std::make_move_iterator(trajectory.points.begin()), std::make_move_iterator(trajectory.points.end()));
+
+	times.reserve(times.size() + trajectory.times.size());
+	times.insert(times.end(), std::make_move_iterator(trajectory.times.begin()), std::make_move_iterator(trajectory.times.end()));
 }

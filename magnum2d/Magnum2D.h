@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <span>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Vector2.h>
 
@@ -16,6 +17,7 @@ namespace Magnum2D
 	using vec2d = Magnum::Math::Vector2<double>;
 
 	vec2 getWindowSize();
+	bool isWindowResized();
 
 	void setCameraCenter(vec2 center);
 	vec2 getCameraCenter();
@@ -44,6 +46,7 @@ namespace Magnum2D
 	bool isKeyDown(char key);
 
 	void drawPolyline(const std::vector<vec2>& points, col3 color);
+	void drawPolyline(std::span<vec2> points, col3 color);
 	void drawLines(const std::vector<vec2>& points, col3 color);
 
 	void drawCircle(vec2 center, float radius, col3 color);

@@ -8,28 +8,86 @@ extern double SimulationDt;
 
 namespace TestBodies
 {
+	float SimulatedSeconds = 0.0f;
+	float CurrentTime = 0.0f;
+	bool IsPlaying = false;
+
 	using namespace Magnum2D;
 
-	std::vector<PointEuler> pointsEuler;
-	std::vector<Trajectory> trajectoriesEuler;
-	std::vector<PointVerlet> pointsVerlet;
-	std::vector<Trajectory> trajectoriesVerlet;
-	std::vector<PointRungeKutta> pointsRungeKutta;
-	std::vector<Trajectory> trajectoriesRungeKutta;
+	template <typename T>
+	struct Bodies
+	{
+		size_t AddBody(vec2d position, vec2d velocity)
+		{
+			initialPoints.emplace_back(position, velocity);
+			currentPoints.emplace_back(position, velocity);
+			trajectories.push_back({});
+
+			return initialPoints.size() - 1;
+		}
+
+		void SimulateClear(double time)
+		{
+			std::vector<std::vector<BurnPtr>> burns(initialPoints.size());
+			currentPoints = initialPoints;
+
+			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time);
+			for (size_t i = 0; i < newTrajectories.size(); i++)
+			{
+				trajectories[i].points = std::move(newTrajectories[i].points);
+				trajectories[i].times = std::move(newTrajectories[i].times);
+			}
+			currentSimulatedSeconds = time;
+		}
+
+		void SimulateExtend(double time)
+		{
+			std::vector<std::vector<BurnPtr>> burns(currentPoints.size());
+			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, currentSimulatedSeconds, 60);
+			for (size_t i = 0; i < newTrajectories.size(); i++)
+				trajectories[i].extend(std::move(newTrajectories[i]));
+
+			currentSimulatedSeconds += time;
+		}
+
+		void Draw(const std::vector<col3>& cols)
+		{
+			for (size_t i = 0; i < trajectories.size(); i++)
+				trajectories[i].draw(0.0, CurrentTime, cols[i]);
+		}
+
+		void Draw(const col3& color)
+		{
+			for (size_t i = 0; i < trajectories.size(); i++)
+				trajectories[i].draw(0.0, CurrentTime, color);
+		}
+
+		double currentSimulatedSeconds = 0.0;
+
+		std::vector<T> initialPoints;
+		std::vector<T> currentPoints;
+		std::vector<Trajectory> trajectories;
+	};
+
+	Bodies<PointEuler> bodiesEuler;
+	Bodies<PointVerlet> bodiesVerlet;
+	Bodies<PointRungeKutta> bodiesRungeKutta;
+
 	std::vector<col3> colors;
 
 	void Simulate()
 	{
-		std::vector<std::vector<BurnPtr>> burns(pointsEuler.size());
+		bodiesEuler.SimulateClear(SimulatedSeconds);
+		bodiesVerlet.SimulateClear(SimulatedSeconds);
+		bodiesRungeKutta.SimulateClear(SimulatedSeconds);
+	}
 
-		auto localEuler = pointsEuler;
-		trajectoriesEuler = Simulation::Simulate(localEuler, burns, SimulationDt, 60, 60);
-
-		auto localVerlet = pointsVerlet;
-		trajectoriesVerlet = Simulation::Simulate(localVerlet, burns, SimulationDt, 60, 60);
-
-		auto localRungeKutta = pointsRungeKutta;
-		trajectoriesRungeKutta = Simulation::Simulate(localRungeKutta, burns, SimulationDt, 60, 60);
+	void Simulate(double seconds)
+	{
+		bodiesEuler.SimulateExtend(seconds);
+		bodiesVerlet.SimulateExtend(seconds);
+		bodiesRungeKutta.SimulateExtend(seconds);
+		SimulatedSeconds += seconds;
 	}
 
 	void Setup()
@@ -38,30 +96,30 @@ namespace TestBodies
 
 		for (int i = 0; i < 5; i++)
 		{
-			static const float IntVelRad = 0.2f;
+			static const float IntVelRad = 0.5f;
 
 			auto position = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
 			auto velocity = (vec2d)Utils::GetRandomPosition(-IntVelRad, IntVelRad, -IntVelRad, IntVelRad);
 
-			pointsEuler.emplace_back(position, velocity);
-			pointsVerlet.emplace_back(position, velocity);
-			pointsRungeKutta.emplace_back(position, velocity);
+			bodiesEuler.AddBody(position, velocity);
+			bodiesVerlet.AddBody(position, velocity);
+			bodiesRungeKutta.AddBody(position, velocity);
 			colors.push_back(Utils::GetRandomColor());
 		}
 
-		Simulate();
+		Simulate(SimulatedSeconds);
 	}
 
 	bool Update()
 	{
-		for (size_t i = 0; i < trajectoriesEuler.size(); i++)
-			trajectoriesEuler[i].draw(rgb(50, 50, 50));
+		if (IsPlaying && CurrentTime < SimulatedSeconds)
+			CurrentTime += getDeltaTimeMs() / 1000.0;
+		if (CurrentTime > SimulatedSeconds)
+			CurrentTime = SimulatedSeconds;
 
-		for (size_t i = 0; i < trajectoriesVerlet.size(); i++)
-			trajectoriesVerlet[i].draw(rgb(100, 100, 100));
-
-		for (size_t i = 0; i < trajectoriesRungeKutta.size(); i++)
-			trajectoriesRungeKutta[i].draw(colors[i]);
+		bodiesEuler.Draw(rgb(50, 50, 50));
+		bodiesVerlet.Draw(rgb(100, 100, 100));
+		bodiesRungeKutta.Draw(colors);
 
 		return false;
 	}

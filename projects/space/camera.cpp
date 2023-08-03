@@ -10,6 +10,9 @@ void Camera::Setup()
 
 void Camera::Update(bool allowMove)
 {
+	if (isWindowResized())
+		Setup();
+
 	if (isMouseDown() && allowMove)
 	{
 		auto mouseDeltaWorld = convertWindowToWorldVector(getMouseDeltaWindow());

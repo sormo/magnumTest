@@ -92,6 +92,7 @@ public:
     Math::Vector2<float> m_cameraCenter;
     Math::Vector2<float> m_cameraSize;
     Math::Vector2<float> m_windowSize;
+    bool m_windowResized = true;
 
     void setupCamera();
 
@@ -202,6 +203,8 @@ void MyApplication::drawEvent()
         v.second.update();
     m_mouseDelta.x() = 0; m_mouseDelta.y() = 0;
     m_mouseScroll.x() = 0; m_mouseScroll.y() = 0;
+
+    m_windowResized = false;
 }
 
 void MyApplication::imguiInit()
@@ -244,6 +247,8 @@ void MyApplication::viewportEvent(ViewportEvent& event)
     g_imgui.relayout(Vector2{ event.windowSize() } / event.dpiScaling(), event.windowSize(), event.framebufferSize());
 
     setupCamera();
+
+    m_windowResized = true;
 }
 
 
@@ -475,6 +480,18 @@ namespace Magnum2D
         g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
     }
 
+    void drawPolyline(std::span<vec2> points, col3 color)
+    {
+        GL::Buffer vertices;
+        vertices.setData({ points.data(), points.size() }, GL::BufferUsage::StaticDraw);
+
+        GL::Mesh mesh{ MeshPrimitive::LineStrip };
+        mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
+        mesh.setCount(points.size());
+
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+    }
+
     void drawLines(const std::vector<vec2>& points, col3 color)
     {
         GL::Buffer vertices;
@@ -532,6 +549,11 @@ namespace Magnum2D
     {
         auto now = std::chrono::high_resolution_clock::now();
         return std::chrono::duration_cast<std::chrono::milliseconds>(now - g_application->m_startApplication).count();
+    }
+
+    bool isWindowResized()
+    {
+        return g_application->m_windowResized;
     }
 }
 

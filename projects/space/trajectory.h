@@ -8,10 +8,13 @@
 struct Trajectory
 {
 	void draw(Magnum2D::col3 color);
+	void draw(double fromTime, double toTime, Magnum2D::col3 color);
 
 	size_t getClosestPointOnTrajectory(const Magnum2D::vec2& point);
 	size_t getClosestPointOnTrajectoryAroundIndex(const Magnum2D::vec2& point, size_t previousIndex); // get closest point given previous index
 	size_t getPoint(double time);
+
+	void extend(Trajectory&& trajectory);
 
 	std::vector<Magnum2D::vec2> points;
 	std::vector<float> times;

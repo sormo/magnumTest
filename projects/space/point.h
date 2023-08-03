@@ -29,7 +29,7 @@ struct Point : public MassPoint
 
 	// thisIndex is index in massPoints which must be skipped when computing acceleration
 	template<class T>
-	void prepareStep(const std::vector<T>& massPoints, float dt, size_t thisIndex = -1)
+	void prepareStep(const std::vector<T>& massPoints, float, size_t thisIndex = -1)
 	{
 		Magnum2D::vec2d acc;
 		for (const auto& m : massPoints)

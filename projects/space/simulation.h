@@ -8,7 +8,7 @@ namespace Simulation
 	using namespace Magnum2D;
 
 	template<typename T>
-	std::vector<Trajectory> Simulate(std::vector<T>& points, const std::vector<std::vector<BurnPtr>>& burns, double dt, double seconds, int32_t numPoints)
+	std::vector<Trajectory> Simulate(std::vector<T>& points, const std::vector<std::vector<BurnPtr>>& burns, double dt, double seconds, double timeOffset = 0.0, int32_t numPoints = 60)
 	{
 		std::vector<Trajectory> result(points.size(), Trajectory{ {} });
 
@@ -69,7 +69,7 @@ namespace Simulation
 				for (size_t j = 0; j < points.size(); j++)
 				{
 					result[j].points.push_back((vec2)points[j].position);
-					result[j].times.push_back(accumulatedTime);
+					result[j].times.push_back(timeOffset + accumulatedTime);
 				}
 			}
 		}
