@@ -10,9 +10,6 @@ using namespace Magnum2D;
 Camera camera;
 
 double SimulationDt = 0.01f;
-extern double TestMassPoint::SimulationSeconds = 10.0f;
-extern float TestBodies::SimulatedSeconds;
-extern bool TestBodies::IsPlaying;
 
 enum TestType : int32_t
 {
@@ -101,24 +98,13 @@ void gui()
 		{
 			if (ImGui::BeginTabItem("MassPoints"))
 			{
-				float seconds = TestMassPoint::SimulationSeconds;
-				if (ImGui::SliderFloat("SimulationSeconds", &seconds, 10.0f, 60.0f))
-				{
-					TestMassPoint::SimulationSeconds = seconds;
-					TestMassPoint::Simulate();
-				}
+				TestMassPoint::Gui();
+
 				ImGui::EndTabItem();
 			}
 			if (ImGui::BeginTabItem("Bodies"))
 			{
-				ImGui::Text("Simulated Seconds: %.1f", TestBodies::SimulatedSeconds);
-				ImGui::SameLine();
-				if (ImGui::Button("Simulate"))
-					TestBodies::Simulate(10.0); 
-				ImGui::SameLine();
-				ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
-
-				ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds);
+				TestBodies::Gui();
 
 				ImGui::EndTabItem();
 			}

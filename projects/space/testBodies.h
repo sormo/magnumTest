@@ -90,6 +90,18 @@ namespace TestBodies
 		SimulatedSeconds += seconds;
 	}
 
+	void Gui()
+	{
+		ImGui::Text("Simulated Seconds: %.1f", TestBodies::SimulatedSeconds);
+		ImGui::SameLine();
+		if (ImGui::Button("Simulate"))
+			TestBodies::Simulate(10.0);
+		ImGui::SameLine();
+		ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
+
+		ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds);
+	}
+
 	void Setup()
 	{
 		auto cameraHsize = getCameraSize() / 2.0f;

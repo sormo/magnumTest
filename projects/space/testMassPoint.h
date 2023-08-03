@@ -7,7 +7,7 @@ extern double SimulationDt;
 
 namespace TestMassPoint
 {
-	double SimulationSeconds;
+	double SimulationSeconds = 10.0;
 
 	using namespace Magnum2D;
 
@@ -62,6 +62,16 @@ namespace TestMassPoint
 			break;
 		default:
 			currentShip = nullptr;
+		}
+	}
+
+	void Gui()
+	{
+		float seconds = TestMassPoint::SimulationSeconds;
+		if (ImGui::SliderFloat("SimulationSeconds", &seconds, 10.0f, 60.0f))
+		{
+			TestMassPoint::SimulationSeconds = seconds;
+			TestMassPoint::Simulate();
 		}
 	}
 
