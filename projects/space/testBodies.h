@@ -11,6 +11,10 @@ namespace TestBodies
 	float SimulatedSeconds = 0.0f;
 	float CurrentTime = 0.0f;
 	bool IsPlaying = false;
+	std::optional<size_t> CurrentBody;
+
+	// how much distance was mouse moved while pressed
+	float accumulatedMouseDelta = 0.0f;
 
 	enum State : int32_t
 	{
@@ -29,6 +33,24 @@ namespace TestBodies
 			initialPoints.emplace_back(position, velocity);
 			currentPoints.emplace_back(position, velocity);
 			trajectories.push_back({});
+
+			VectorHandler::Vector vec;
+			vec.from = (vec2)position;
+			vec.to = (vec2)(position + velocity);
+			vec.onFromChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
+			{
+				initialPoints[index].position = (vec2d)v;
+				//SimulateClear(SimulatedSeconds);
+				return v;
+			};
+			vec.onToChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
+			{
+				initialPoints[index].setVelocity((vec2d)v - initialPoints[index].position);
+				//SimulateClear(SimulatedSeconds);
+				return v;
+			};
+
+			vectorHandler.Push(std::move(vec));
 
 			return initialPoints.size() - 1;
 		}
@@ -69,11 +91,18 @@ namespace TestBodies
 				trajectories[i].draw(0.0, CurrentTime, color);
 		}
 
+		vec2 GetPosition(size_t index, double time)
+		{
+			return trajectories[index].points[trajectories[index].getPoint(time)];
+		}
+
 		double currentSimulatedSeconds = 0.0;
 
 		std::vector<T> initialPoints;
 		std::vector<T> currentPoints;
 		std::vector<Trajectory> trajectories;
+
+		VectorHandler vectorHandler;
 	};
 
 	Bodies<PointEuler> bodiesEuler;
@@ -81,6 +110,18 @@ namespace TestBodies
 	Bodies<PointRungeKutta> bodiesRungeKutta;
 
 	std::vector<col3> colors;
+
+	void SynchronizeWithRungeKutta()
+	{
+		// something has changed, copy runge-kutta to others
+		for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
+		{
+			bodiesEuler.initialPoints[i].position = bodiesRungeKutta.initialPoints[i].position;
+			bodiesEuler.initialPoints[i].setVelocity(bodiesRungeKutta.initialPoints[i].velocity);
+			bodiesVerlet.initialPoints[i].position = bodiesRungeKutta.initialPoints[i].position;
+			bodiesVerlet.initialPoints[i].setVelocity(bodiesRungeKutta.initialPoints[i].velocity);
+		}
+	}
 
 	void Simulate()
 	{
@@ -110,6 +151,16 @@ namespace TestBodies
 
 		ImGui::RadioButton("View", (int32_t*)&CurrentState, 0); ImGui::SameLine();
 		ImGui::RadioButton("Add", (int32_t*)&CurrentState, 1);
+
+		if (CurrentBody)
+		{
+			float mass = bodiesRungeKutta.initialPoints[*CurrentBody].mass;
+			if (ImGui::SliderFloat("Mass", &mass, 0.1f, 10.0f))
+			{
+				bodiesRungeKutta.initialPoints[*CurrentBody].mass = mass;
+				Simulate();
+			}
+		}
 	}
 
 	void Setup()
@@ -145,6 +196,13 @@ namespace TestBodies
 		bodiesEuler.Draw(rgb(50, 50, 50));
 		bodiesVerlet.Draw(rgb(100, 100, 100));
 		bodiesRungeKutta.Draw(colors);
+		bodiesRungeKutta.vectorHandler.Draw();
+
+		for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
+		{
+			col3 color = CurrentBody && *CurrentBody == i ? rgb(50, 200, 50) : rgb(50, 50, 200);
+			drawCircle((vec2)bodiesRungeKutta.GetPosition(i, CurrentTime), 0.1f, color);
+		}
 	}
 
 	bool Update()
@@ -167,8 +225,40 @@ namespace TestBodies
 			}
 		}
 
+		if (isMouseReleased())
+		{
+			if (accumulatedMouseDelta < 0.1f)
+			{
+				CurrentBody = {};
+				auto mousePosition = getMousePositionWorld();
+				for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
+				{
+					vec2 position = (vec2)bodiesRungeKutta.GetPosition(i, CurrentTime);
+					if ((position - mousePosition).length() < 0.2f)
+					{
+						CurrentBody = i;
+						break;
+					}
+				}
+			}
+			accumulatedMouseDelta = 0.0f;
+		}
+
+		if (isMouseDown())
+		{
+			accumulatedMouseDelta += convertWindowToWorldVector(getMouseDeltaWindow()).length();
+		}
+
+		bool result = bodiesRungeKutta.vectorHandler.Update();
+
 		Draw();
 
-		return false;
+		if (result)
+		{
+			SynchronizeWithRungeKutta();
+			Simulate();
+		}
+
+		return result;
 	}
 }

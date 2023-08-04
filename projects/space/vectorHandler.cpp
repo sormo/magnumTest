@@ -9,20 +9,26 @@ bool VectorHandler::UpdateHighlight()
 
 	for (size_t i = 0; i < vectors.size(); i++)
 	{
-		Magnum2D::vec2 offsetTo = position - vectors[i].to;
-		if (offsetTo.length() < GrabToRadius)
+		if (vectors[i].onToChange)
 		{
-			highlightVec = i;
-			highlightType = HandleType::To;
-			return true;
+			Magnum2D::vec2 offsetTo = position - vectors[i].to;
+			if (offsetTo.length() < GrabToRadius)
+			{
+				highlightVec = i;
+				highlightType = HandleType::To;
+				return true;
+			}
 		}
 
-		Magnum2D::vec2 offsetFrom = position - vectors[i].from;
-		if (offsetFrom.length() < GrabFromRadius)
+		if (vectors[i].onFromChange)
 		{
-			highlightVec = i;
-			highlightType = HandleType::From;
-			return true;
+			Magnum2D::vec2 offsetFrom = position - vectors[i].from;
+			if (offsetFrom.length() < GrabFromRadius)
+			{
+				highlightVec = i;
+				highlightType = HandleType::From;
+				return true;
+			}
 		}
 	}
 
@@ -37,24 +43,30 @@ bool VectorHandler::Update()
 
 		for (size_t i = 0; i < vectors.size(); i++)
 		{
-			Magnum2D::vec2 offsetTo = position - vectors[i].to;
-			if (offsetTo.length() < GrabToRadius)
+			if (vectors[i].onToChange)
 			{
-				grabVec = i;
-				grabType = HandleType::To;
-				grabOffset = offsetTo;
+				Magnum2D::vec2 offsetTo = position - vectors[i].to;
+				if (offsetTo.length() < GrabToRadius)
+				{
+					grabVec = i;
+					grabType = HandleType::To;
+					grabOffset = offsetTo;
 
-				return true;
+					return true;
+				}
 			}
 
-			Magnum2D::vec2 offsetFrom = position - vectors[i].from;
-			if (offsetFrom.length() < GrabFromRadius)
+			if (vectors[i].onFromChange)
 			{
-				grabVec = i;
-				grabType = HandleType::From;
-				grabOffset = offsetFrom;
+				Magnum2D::vec2 offsetFrom = position - vectors[i].from;
+				if (offsetFrom.length() < GrabFromRadius)
+				{
+					grabVec = i;
+					grabType = HandleType::From;
+					grabOffset = offsetFrom;
 
-				return true;
+					return true;
+				}
 			}
 		}
 	}
@@ -87,12 +99,18 @@ void VectorHandler::Draw()
 {
 	for (size_t i = 0; i < vectors.size(); i++)
 	{
-		Magnum2D::col3 circleColorFrom = highlightVec && *highlightVec == i && highlightType == HandleType::From ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-		Magnum2D::col3 circleColorTo = highlightVec && *highlightVec == i && highlightType == HandleType::To ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-
 		Utils::DrawVector(vectors[i].from, vectors[i].to - vectors[i].from, Magnum2D::rgb(255, 255, 255));
-		Magnum2D::drawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), circleColorTo);
-		Magnum2D::drawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), circleColorFrom);
+
+		if (vectors[i].onFromChange)
+		{
+			Magnum2D::col3 circleColorFrom = highlightVec && *highlightVec == i && highlightType == HandleType::From ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
+			Magnum2D::drawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), circleColorFrom);
+		}
+		if (vectors[i].onToChange)
+		{
+			Magnum2D::col3 circleColorTo = highlightVec && *highlightVec == i && highlightType == HandleType::To ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
+			Magnum2D::drawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), circleColorTo);
+		}
 		Magnum2D::drawCircle(vectors[i].from, Common::GetZoomIndependentSize(0.03f), Magnum2D::rgb(10, 200, 10));
 	}
 }
