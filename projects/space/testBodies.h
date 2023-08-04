@@ -12,6 +12,13 @@ namespace TestBodies
 	float CurrentTime = 0.0f;
 	bool IsPlaying = false;
 
+	enum State : int32_t
+	{
+		View = 0,
+		AddBody
+	};
+	State CurrentState = State::View;
+
 	using namespace Magnum2D;
 
 	template <typename T>
@@ -100,6 +107,9 @@ namespace TestBodies
 		ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
 
 		ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds);
+
+		ImGui::RadioButton("View", (int32_t*)&CurrentState, 0); ImGui::SameLine();
+		ImGui::RadioButton("Add", (int32_t*)&CurrentState, 1);
 	}
 
 	void Setup()
@@ -122,16 +132,42 @@ namespace TestBodies
 		Simulate(SimulatedSeconds);
 	}
 
-	bool Update()
+	void UdpateCurrentTime()
 	{
 		if (IsPlaying && CurrentTime < SimulatedSeconds)
 			CurrentTime += getDeltaTimeMs() / 1000.0;
 		if (CurrentTime > SimulatedSeconds)
 			CurrentTime = SimulatedSeconds;
+	}
 
+	void Draw()
+	{
 		bodiesEuler.Draw(rgb(50, 50, 50));
 		bodiesVerlet.Draw(rgb(100, 100, 100));
 		bodiesRungeKutta.Draw(colors);
+	}
+
+	bool Update()
+	{
+		UdpateCurrentTime();
+
+		if (isMousePressed())
+		{
+			if (CurrentState == State::AddBody)
+			{
+				auto position = (vec2d)getMousePositionWorld();
+				bodiesEuler.AddBody(position, {});
+				bodiesVerlet.AddBody(position, {});
+				bodiesRungeKutta.AddBody(position, {});
+				colors.push_back(Utils::GetRandomColor());
+
+				Simulate();
+
+				CurrentState = State::View;
+			}
+		}
+
+		Draw();
 
 		return false;
 	}
