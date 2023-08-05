@@ -123,6 +123,19 @@ namespace TestBodies
 		}
 	}
 
+	void RefreshEffectiveRadius()
+	{
+		for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
+		{
+			bodiesEuler.initialPoints[i].recomputeEffectiveRadius();
+			bodiesEuler.currentPoints[i].recomputeEffectiveRadius();
+			bodiesVerlet.initialPoints[i].recomputeEffectiveRadius();
+			bodiesVerlet.currentPoints[i].recomputeEffectiveRadius();
+			bodiesRungeKutta.initialPoints[i].recomputeEffectiveRadius();
+			bodiesRungeKutta.currentPoints[i].recomputeEffectiveRadius();
+		}
+	}
+
 	void Simulate()
 	{
 		bodiesEuler.SimulateClear(SimulatedSeconds);
@@ -140,14 +153,14 @@ namespace TestBodies
 
 	void Gui()
 	{
-		ImGui::Text("Simulated Seconds: %.1f", TestBodies::SimulatedSeconds);
+		ImGui::Text("Simulated Seconds: %.1f [s]", TestBodies::SimulatedSeconds);
 		ImGui::SameLine();
 		if (ImGui::Button("Simulate"))
 			TestBodies::Simulate(10.0);
 		ImGui::SameLine();
 		ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
 
-		ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds);
+		ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds); ImGui::SameLine(); ImGui::Text("[s]");
 
 		ImGui::RadioButton("View", (int32_t*)&CurrentState, 0); ImGui::SameLine();
 		ImGui::RadioButton("Add", (int32_t*)&CurrentState, 1);
@@ -156,18 +169,19 @@ namespace TestBodies
 		{
 			auto& trajectory = bodiesRungeKutta.trajectories[*CurrentBody];
 			size_t currentIndex = trajectory.getPoint(CurrentTime);
-			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f ms", trajectory.positions[currentIndex].x(), trajectory.positions[currentIndex].y());
-			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f ms", trajectory.velocities[currentIndex].x(), trajectory.velocities[currentIndex].y());
+			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m]", trajectory.positions[currentIndex].x(), trajectory.positions[currentIndex].y());
+			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m/s]", trajectory.velocities[currentIndex].x(), trajectory.velocities[currentIndex].y());
 
 			auto& bodyCurrent = bodiesRungeKutta.currentPoints[*CurrentBody];
 			auto& bodyInit = bodiesRungeKutta.initialPoints[*CurrentBody];
-			float mass = bodyInit.mass;
+			float mass = (float)bodyInit.getMass();
 			if (ImGui::SliderFloat("Mass", &mass, 0.1f, 10.0f))
 			{
-				bodyInit.mass = mass;
-				bodyCurrent.mass = mass;
+				bodyInit.setMass(mass);
+				bodyCurrent.setMass(mass);
 				Simulate();
-			}
+			} 
+			ImGui::SameLine(); ImGui::Text("[kg]");
 		}
 	}
 
@@ -210,6 +224,16 @@ namespace TestBodies
 		{
 			col3 color = CurrentBody && *CurrentBody == i ? rgb(50, 200, 50) : rgb(50, 50, 200);
 			drawCircle((vec2)bodiesRungeKutta.GetPosition(i, CurrentTime), 0.1f, color);
+		}
+
+		if (CurrentBody)
+		{
+			float effectiveRadius = bodiesRungeKutta.initialPoints[*CurrentBody].getEffectiveRadius();
+			auto& trajectory = bodiesRungeKutta.trajectories[*CurrentBody];
+			size_t currentIndex = trajectory.getPoint(CurrentTime);
+			auto position = trajectory.positions[currentIndex];
+
+			drawCircleOutline(position, effectiveRadius, rgb(50, 50, 50));
 		}
 	}
 

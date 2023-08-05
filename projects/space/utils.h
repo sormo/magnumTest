@@ -9,7 +9,9 @@ namespace Utils
 	Magnum2D::col3 GetRandomColor();
 	Magnum2D::vec2 RotateVector(const Magnum2D::vec2& vector, float radians);
 	float DistanceSqr(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2);
+	double DistanceSqr(const Magnum2D::vec2d& p1, const Magnum2D::vec2d& p2);
 	float LenghtSqr(const Magnum2D::vec2& p);
+	double LenghtSqr(const Magnum2D::vec2d& p);
 
 	void DrawVector(const Magnum2D::vec2& position, const Magnum2D::vec2& vector, const Magnum2D::col3& color);
 	void DrawCross(const Magnum2D::vec2& position, float size, const Magnum2D::col3& color);

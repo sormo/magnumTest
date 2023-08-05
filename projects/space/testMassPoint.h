@@ -18,6 +18,12 @@ namespace TestMassPoint
 
 	Ship* currentShip = nullptr;
 
+	static void RefreshEffectiveRadius()
+	{
+		for (auto& m : massPoints)
+			m.recomputeEffectiveRadius();
+	}
+
 	static void Simulate(Ship& t)
 	{
 		t.Simulate(massPoints, SimulationDt, SimulationSeconds, 60);
@@ -107,7 +113,7 @@ namespace TestMassPoint
 		for (const auto& m : massPoints)
 		{
 			drawCircle((vec2)m.position, 0.07f, rgb(66, 135, 245));
-			drawCircleOutline((vec2)m.position, m.mass * GravityThreshold, rgb(50, 50, 50));
+			drawCircleOutline((vec2)m.position, m.getEffectiveRadius(), rgb(50, 50, 50));
 		}
 
 		// draw timepoints

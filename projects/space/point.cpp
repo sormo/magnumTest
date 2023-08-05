@@ -3,7 +3,7 @@
 using namespace Magnum2D;
 
 double GravitationalConstant = 0.8;
-double GravityThreshold = 10.0;
+double GravityThreshold = 0.001;
 
 Point::Point(const Magnum2D::vec2d& pos)
 {
@@ -138,4 +138,31 @@ Magnum2D::vec2d PointRungeKutta::getVelocity()
 void PointRungeKutta::reset()
 {
 	position = acceleration = velocity = { 0.0, 0.0 };
+}
+
+MassPoint::MassPoint()
+{
+	recomputeEffectiveRadius();
+}
+
+void MassPoint::recomputeEffectiveRadius()
+{
+	effectiveRadius = std::sqrt(GravitationalConstant * mass / GravityThreshold);
+	effectiveRadiusSqr = effectiveRadius * effectiveRadius;
+}
+
+double MassPoint::getMass() const
+{
+	return mass;
+}
+
+void MassPoint::setMass(double newMass)
+{
+	mass = newMass;
+	recomputeEffectiveRadius();
+}
+
+double MassPoint::getEffectiveRadius() const
+{
+	return effectiveRadius;
 }

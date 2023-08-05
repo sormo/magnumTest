@@ -1,4 +1,5 @@
 #pragma once
+#include "utils.h"
 #include <Magnum2D.h>
 #include <vector>
 #include <memory>
@@ -9,8 +10,21 @@ extern double SimulationDt;
 
 struct MassPoint
 {
+	MassPoint();
+
 	Magnum2D::vec2d position;
+
+	double getMass() const;
+	void setMass(double mass);
+
+	double getEffectiveRadius() const;
+	void recomputeEffectiveRadius();
+
+protected:
+
 	double mass = 1.0;
+	double effectiveRadius = 0.0f;
+	double effectiveRadiusSqr = 0.0f;
 };
 
 struct Burn
@@ -33,7 +47,7 @@ struct Point : public MassPoint
 	{
 		Magnum2D::vec2d acc;
 		for (const auto& m : massPoints)
-			acc += attractForce(m.position, m.mass) / mass;
+			acc += attractForce(m.position, m.getMass()) / mass;
 		acceleration = computeAcceleration(massPoints, thisIndex);
 	}
 
@@ -57,11 +71,10 @@ struct Point : public MassPoint
 			if (i == thisIndex)
 				continue;
 
-			// TODO squared length
-			if ((massPoints[i].position - position).length() > mass * GravityThreshold)
+			if (Utils::DistanceSqr(massPoints[i].position, position) > effectiveRadiusSqr)
 				continue;
 
-			result += attractForce(massPoints[i].position, massPoints[i].mass) / mass;
+			result += attractForce(massPoints[i].position, massPoints[i].getMass()) / mass;
 		}
 
 		return result;

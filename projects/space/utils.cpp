@@ -79,7 +79,20 @@ namespace Utils
 		return dx * dx + dy * dy;
 	}
 
+	double DistanceSqr(const Magnum2D::vec2d& p1, const Magnum2D::vec2d& p2)
+	{
+		double dx = p1.x() - p2.x();
+		double dy = p1.y() - p2.y();
+
+		return dx * dx + dy * dy;
+	}
+
 	float LenghtSqr(const Magnum2D::vec2& p)
+	{
+		return p.x() * p.x() + p.y() * p.y();
+	}
+
+	double LenghtSqr(const Magnum2D::vec2d& p)
 	{
 		return p.x() * p.x() + p.y() * p.y();
 	}
