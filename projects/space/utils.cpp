@@ -78,4 +78,27 @@ namespace Utils
 
 		return dx * dx + dy * dy;
 	}
+
+	float LenghtSqr(const Magnum2D::vec2& p)
+	{
+		return p.x() * p.x() + p.y() * p.y();
+	}
+
+	bool ClickHandler::IsClick()
+	{
+		return Magnum2D::isMouseReleased() && accumulatedMouseDelta < MouseDeltaSqrThreshold;
+	}
+
+	void ClickHandler::Update()
+	{
+		if (isMouseDown())
+		{
+			accumulatedMouseDelta += LenghtSqr(convertWindowToWorldVector(getMouseDeltaWindow()));
+		}
+
+		if (isMouseReleased())
+		{
+			accumulatedMouseDelta = 0.0f;
+		}
+	}
 }

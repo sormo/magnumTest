@@ -13,8 +13,7 @@ namespace TestBodies
 	bool IsPlaying = false;
 	std::optional<size_t> CurrentBody;
 
-	// how much distance was mouse moved while pressed
-	float accumulatedMouseDelta = 0.0f;
+	Utils::ClickHandler clickHandler;
 
 	enum State : int32_t
 	{
@@ -225,29 +224,22 @@ namespace TestBodies
 			}
 		}
 
-		if (isMouseReleased())
+		if (clickHandler.IsClick())
 		{
-			if (accumulatedMouseDelta < 0.1f)
+			CurrentBody = {};
+			auto mousePosition = getMousePositionWorld();
+			for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
 			{
-				CurrentBody = {};
-				auto mousePosition = getMousePositionWorld();
-				for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
+				vec2 position = (vec2)bodiesRungeKutta.GetPosition(i, CurrentTime);
+				if ((position - mousePosition).length() < 0.2f)
 				{
-					vec2 position = (vec2)bodiesRungeKutta.GetPosition(i, CurrentTime);
-					if ((position - mousePosition).length() < 0.2f)
-					{
-						CurrentBody = i;
-						break;
-					}
+					CurrentBody = i;
+					break;
 				}
 			}
-			accumulatedMouseDelta = 0.0f;
 		}
 
-		if (isMouseDown())
-		{
-			accumulatedMouseDelta += convertWindowToWorldVector(getMouseDeltaWindow()).length();
-		}
+		clickHandler.Update();
 
 		bool result = bodiesRungeKutta.vectorHandler.Update();
 
