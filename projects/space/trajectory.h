@@ -16,7 +16,8 @@ struct Trajectory
 
 	void extend(Trajectory&& trajectory);
 
-	std::vector<Magnum2D::vec2> points;
+	std::vector<Magnum2D::vec2> positions;
+	std::vector<Magnum2D::vec2> velocities;
 	std::vector<float> times;
 };
 

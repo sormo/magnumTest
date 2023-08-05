@@ -40,6 +40,7 @@ struct Point : public MassPoint
 	virtual void step(double dt) = 0;
 	virtual void setVelocity(const Magnum2D::vec2d& vel) = 0;
 	virtual void addVelocity(const Magnum2D::vec2d& vel) = 0;
+	virtual Magnum2D::vec2d getVelocity() = 0;
 	virtual void reset() = 0;
 
 	void applyForce(const Magnum2D::vec2d& force);
@@ -76,6 +77,7 @@ struct PointEuler : public Point
 	void step(double dt) override;
 	void setVelocity(const Magnum2D::vec2d& vel) override;
 	void addVelocity(const Magnum2D::vec2d& vel) override;
+	Magnum2D::vec2d getVelocity() override;
 	void reset() override;
 };
 
@@ -89,6 +91,7 @@ struct PointVerlet : public Point
 	void step(double dt) override;
 	void setVelocity(const Magnum2D::vec2d& vel) override;
 	void addVelocity(const Magnum2D::vec2d& vel) override;
+	Magnum2D::vec2d getVelocity() override;
 	void reset() override;
 };
 
@@ -135,5 +138,6 @@ struct PointRungeKutta : public Point
 	void step(double dt) override;
 	void setVelocity(const Magnum2D::vec2d& vel) override;
 	void addVelocity(const Magnum2D::vec2d& vel) override;
+	Magnum2D::vec2d getVelocity() override;
 	void reset() override;
 };

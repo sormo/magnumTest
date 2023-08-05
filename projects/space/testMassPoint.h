@@ -114,9 +114,9 @@ namespace TestMassPoint
 		for (auto& t : ships)
 		{
 			if (hoverTimepoint)
-				drawCircle(t->trajectoryVerlet.points[*hoverTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 255, 50));
+				drawCircle(t->trajectoryVerlet.positions[*hoverTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 255, 50));
 			if (selectTimepoint)
-				drawCircle(t->trajectoryVerlet.points[*selectTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 50, 255));
+				drawCircle(t->trajectoryVerlet.positions[*selectTimepoint], Common::GetZoomIndependentSize(0.06f), rgb(50, 50, 255));
 		}
 
 		// draw ships

@@ -55,6 +55,11 @@ void PointEuler::addVelocity(const vec2d& vel)
 	velocity += vel;
 }
 
+Magnum2D::vec2d PointEuler::getVelocity()
+{
+	return velocity;
+}
+
 PointEuler::PointEuler(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
 	: Point(pos)
 {
@@ -92,6 +97,11 @@ void PointVerlet::addVelocity(const vec2d& vel)
 	positionOld = positionOld - vel * lastDt;
 }
 
+Magnum2D::vec2d PointVerlet::getVelocity()
+{
+	return position - positionOld;
+}
+
 void PointVerlet::reset()
 {
 	position = acceleration = positionOld = { 0.0, 0.0 };
@@ -118,6 +128,11 @@ void PointRungeKutta::setVelocity(const vec2d& vel)
 void PointRungeKutta::addVelocity(const vec2d& vel)
 {
 	velocity += vel;
+}
+
+Magnum2D::vec2d PointRungeKutta::getVelocity()
+{
+	return velocity;
 }
 
 void PointRungeKutta::reset()

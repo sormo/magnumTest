@@ -62,7 +62,8 @@ namespace TestBodies
 			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time);
 			for (size_t i = 0; i < newTrajectories.size(); i++)
 			{
-				trajectories[i].points = std::move(newTrajectories[i].points);
+				trajectories[i].positions = std::move(newTrajectories[i].positions);
+				trajectories[i].velocities = std::move(newTrajectories[i].velocities);
 				trajectories[i].times = std::move(newTrajectories[i].times);
 			}
 			currentSimulatedSeconds = time;
@@ -92,7 +93,7 @@ namespace TestBodies
 
 		vec2 GetPosition(size_t index, double time)
 		{
-			return trajectories[index].points[trajectories[index].getPoint(time)];
+			return trajectories[index].positions[trajectories[index].getPoint(time)];
 		}
 
 		double currentSimulatedSeconds = 0.0;
@@ -153,10 +154,18 @@ namespace TestBodies
 
 		if (CurrentBody)
 		{
-			float mass = bodiesRungeKutta.initialPoints[*CurrentBody].mass;
+			auto& trajectory = bodiesRungeKutta.trajectories[*CurrentBody];
+			size_t currentIndex = trajectory.getPoint(CurrentTime);
+			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f ms", trajectory.positions[currentIndex].x(), trajectory.positions[currentIndex].y());
+			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f ms", trajectory.velocities[currentIndex].x(), trajectory.velocities[currentIndex].y());
+
+			auto& bodyCurrent = bodiesRungeKutta.currentPoints[*CurrentBody];
+			auto& bodyInit = bodiesRungeKutta.initialPoints[*CurrentBody];
+			float mass = bodyInit.mass;
 			if (ImGui::SliderFloat("Mass", &mass, 0.1f, 10.0f))
 			{
-				bodiesRungeKutta.initialPoints[*CurrentBody].mass = mass;
+				bodyInit.mass = mass;
+				bodyCurrent.mass = mass;
 				Simulate();
 			}
 		}

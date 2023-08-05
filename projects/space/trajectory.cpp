@@ -32,9 +32,9 @@ size_t Trajectory::getClosestPointOnTrajectory(const Magnum2D::vec2& point)
 	size_t result = 0;
 	float distanceSquared = std::numeric_limits<float>::max();
 
-	for (size_t i = 0; i < points.size(); i++)
+	for (size_t i = 0; i < positions.size(); i++)
 	{
-		float distSqr = Utils::DistanceSqr(points[i], point);
+		float distSqr = Utils::DistanceSqr(positions[i], point);
 		if (distSqr < distanceSquared)
 		{
 			distanceSquared = distSqr;
@@ -49,29 +49,29 @@ size_t Trajectory::getClosestPointOnTrajectory(const Magnum2D::vec2& point)
 // to given point. When decided, it will iterate that direction until distance to the point is decreasing.
 size_t Trajectory::getClosestPointOnTrajectoryAroundIndex(const vec2& point, size_t previousIndex)
 {
-	float prevDistSqr = Utils::DistanceSqr(point, (vec2)points[previousIndex]);
+	float prevDistSqr = Utils::DistanceSqr(point, (vec2)positions[previousIndex]);
 	float leftDistSqr = std::numeric_limits<float>::max(), rightDistSqr = std::numeric_limits<float>::max();
 
 	if (previousIndex != 0)
-		leftDistSqr = Utils::DistanceSqr(point, (vec2)points[previousIndex - 1]);
-	if (previousIndex != points.size() - 1)
-		rightDistSqr = Utils::DistanceSqr(point, (vec2)points[previousIndex + 1]);
+		leftDistSqr = Utils::DistanceSqr(point, (vec2)positions[previousIndex - 1]);
+	if (previousIndex != positions.size() - 1)
+		rightDistSqr = Utils::DistanceSqr(point, (vec2)positions[previousIndex + 1]);
 
 	if (prevDistSqr < leftDistSqr && prevDistSqr < rightDistSqr)
 		return previousIndex;
 
-	auto iterateCloser = [](size_t index, float distSqr, const vec2& point, const std::vector<vec2>& points, auto inc)
+	auto iterateCloser = [](size_t index, float distSqr, const vec2& point, const std::vector<vec2>& positions, auto inc)
 	{
-		size_t indexNext = inc(index, points.size());
-		float distSqrNext = Utils::DistanceSqr(point, (vec2)points[indexNext]);
+		size_t indexNext = inc(index, positions.size());
+		float distSqrNext = Utils::DistanceSqr(point, (vec2)positions[indexNext]);
 
 		while (distSqrNext < distSqr)
 		{
 			index = indexNext;
 			distSqr = distSqrNext;
 
-			indexNext = inc(index, points.size());
-			distSqrNext = Utils::DistanceSqr(point, (vec2)points[indexNext]);
+			indexNext = inc(index, positions.size());
+			distSqrNext = Utils::DistanceSqr(point, (vec2)positions[indexNext]);
 		}
 
 		return index;
@@ -86,7 +86,7 @@ size_t Trajectory::getClosestPointOnTrajectoryAroundIndex(const vec2& point, siz
 			return index - 1;
 		};
 
-		return iterateCloser(previousIndex - 1, leftDistSqr, point, points, circDec);
+		return iterateCloser(previousIndex - 1, leftDistSqr, point, positions, circDec);
 	}
 	else
 	{
@@ -97,7 +97,7 @@ size_t Trajectory::getClosestPointOnTrajectoryAroundIndex(const vec2& point, siz
 			return index + 1;
 		};
 
-		return iterateCloser(previousIndex + 1, rightDistSqr, point, points, circInc);
+		return iterateCloser(previousIndex + 1, rightDistSqr, point, positions, circInc);
 	}
 
 	return size_t();
@@ -108,16 +108,16 @@ void Trajectory::draw(double fromTime, double toTime, Magnum2D::col3 color)
 	auto fromIndex = getPoint(fromTime);
 	auto toIndex = getPoint(toTime);
 
-	drawPolyline(std::span(std::begin(points) + fromIndex, toIndex - fromIndex), color);
+	drawPolyline(std::span(std::begin(positions) + fromIndex, toIndex - fromIndex), color);
 
-	Utils::DrawCross(points[fromIndex], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
+	Utils::DrawCross(positions[fromIndex], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
 }
 
 void Trajectory::draw(col3 color)
 {
-	drawPolyline(points, color);
+	drawPolyline(positions, color);
 
-	Utils::DrawCross(points[0], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
+	Utils::DrawCross(positions[0], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
 }
 
 size_t Trajectory::getPoint(double time)
@@ -134,8 +134,11 @@ size_t Trajectory::getPoint(double time)
 
 void Trajectory::extend(Trajectory&& trajectory)
 {
-	points.reserve(points.size() + trajectory.points.size());
-	points.insert(points.end(), std::make_move_iterator(trajectory.points.begin()), std::make_move_iterator(trajectory.points.end()));
+	positions.reserve(positions.size() + trajectory.positions.size());
+	positions.insert(positions.end(), std::make_move_iterator(trajectory.positions.begin()), std::make_move_iterator(trajectory.positions.end()));
+
+	velocities.reserve(velocities.size() + trajectory.velocities.size());
+	velocities.insert(velocities.end(), std::make_move_iterator(trajectory.velocities.begin()), std::make_move_iterator(trajectory.velocities.end()));
 
 	times.reserve(times.size() + trajectory.times.size());
 	times.insert(times.end(), std::make_move_iterator(trajectory.times.begin()), std::make_move_iterator(trajectory.times.end()));

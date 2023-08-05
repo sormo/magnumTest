@@ -18,9 +18,9 @@ std::tuple<std::vector<vec2>, std::vector<float>> SimulateHelper(T&& point, cons
 
 void Ship::Simulate(const std::vector<MassPoint>& massPoints, double dt, double seconds, int32_t numPoints)
 {
-	std::tie(trajectoryEuler.points, trajectoryEuler.times) = SimulateHelper(PointEuler((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
-	std::tie(trajectoryVerlet.points, trajectoryVerlet.times) = SimulateHelper(PointVerlet((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
-	std::tie(trajectoryRungeKuta.points, trajectoryRungeKuta.times) = SimulateHelper(PointRungeKutta((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
+	std::tie(trajectoryEuler.positions, trajectoryEuler.times) = SimulateHelper(PointEuler((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
+	std::tie(trajectoryVerlet.positions, trajectoryVerlet.times) = SimulateHelper(PointVerlet((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
+	std::tie(trajectoryRungeKuta.positions, trajectoryRungeKuta.times) = SimulateHelper(PointRungeKutta((vec2d)initialPosition), massPoints, burns, dt, seconds, numPoints);
 
 	burnsHandler.Refresh();
 }

@@ -13,7 +13,7 @@ void BurnsHandler::Draw()
 	vectorHandler.Draw();
 
 	if (burnAddIndex)
-		drawCircle(trajectory->points[*burnAddIndex], Common::GetZoomIndependentSize(0.03f), rgb(200, 10, 10));
+		drawCircle(trajectory->positions[*burnAddIndex], Common::GetZoomIndependentSize(0.03f), rgb(200, 10, 10));
 }
 
 UpdateResult BurnsHandler::Update()
@@ -45,7 +45,7 @@ UpdateResult BurnsHandler::Update()
 		else
 			closestPoint = trajectory->getClosestPointOnTrajectory(positionMouse);
 
-		if ((positionMouse - trajectory->points[closestPoint]).length() < 0.1f)
+		if ((positionMouse - trajectory->positions[closestPoint]).length() < 0.1f)
 		{
 			burnAddIndex = closestPoint;
 			return UpdateResult::InputGrab;
@@ -61,7 +61,7 @@ UpdateResult BurnsHandler::Update()
 
 void BurnsHandler::NewBurn(Burn* burn)
 {
-	vec2 from = (vec2)trajectory->points[trajectory->getPoint(burn->time)];
+	vec2 from = (vec2)trajectory->positions[trajectory->getPoint(burn->time)];
 	vec2 to = from + (vec2)burn->velocity;
 
 	auto modifyTo = [this](const vec2& point, void* context)
@@ -77,9 +77,9 @@ void BurnsHandler::NewBurn(Burn* burn)
 		auto result = trajectory->getClosestPointOnTrajectory(point);
 
 		burn->time = trajectory->times[result];
-		burn->simulatedPosition = (vec2d)trajectory->points[result];
+		burn->simulatedPosition = (vec2d)trajectory->positions[result];
 
-		return trajectory->points[result];
+		return trajectory->positions[result];
 	};
 
 	vectorHandler.Push({ from, to, burn, modifyFrom, modifyTo });
@@ -91,7 +91,7 @@ void BurnsHandler::Refresh()
 	{
 		Burn* burn = (Burn*)vec.context;
 
-		vec.from = (vec2)trajectory->points[trajectory->getPoint(burn->time)];
+		vec.from = (vec2)trajectory->positions[trajectory->getPoint(burn->time)];
 		vec.to = vec.from + (vec2)burn->velocity;
 	}
 }

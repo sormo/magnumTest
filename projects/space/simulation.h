@@ -14,13 +14,15 @@ namespace Simulation
 
 		for (auto& t : result)
 		{
-			t.points.reserve(numPoints);
+			t.positions.reserve(numPoints);
+			t.velocities.reserve(numPoints);
 			t.times.reserve(numPoints);
 		}
 
 		for (size_t i = 0; i < points.size(); i++)
 		{
-			result[i].points.push_back((vec2)points[i].position);
+			result[i].positions.push_back((vec2)points[i].position);
+			result[i].velocities.push_back((vec2)points[i].getVelocity());
 			result[i].times.push_back(0.0f);
 		}
 
@@ -68,7 +70,8 @@ namespace Simulation
 			{
 				for (size_t j = 0; j < points.size(); j++)
 				{
-					result[j].points.push_back((vec2)points[j].position);
+					result[j].positions.push_back((vec2)points[j].position);
+					result[j].velocities.push_back((vec2)points[j].getVelocity());
 					result[j].times.push_back(timeOffset + accumulatedTime);
 				}
 			}
