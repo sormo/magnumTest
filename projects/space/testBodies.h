@@ -27,11 +27,14 @@ namespace TestBodies
 	template <typename T>
 	struct Bodies
 	{
-		size_t AddBody(vec2d position, vec2d velocity)
+		size_t AddBody(vec2d position, vec2d velocity, double mass = 1.0)
 		{
 			initialPoints.emplace_back(position, velocity);
 			currentPoints.emplace_back(position, velocity);
 			trajectories.push_back({});
+
+			initialPoints.back().setMass(mass);
+			currentPoints.back().setMass(mass);
 
 			VectorHandler::Vector vec;
 			vec.from = (vec2)position;
@@ -59,7 +62,7 @@ namespace TestBodies
 			std::vector<std::vector<BurnPtr>> burns(initialPoints.size());
 			currentPoints = initialPoints;
 
-			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time);
+			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, 0.0, 60);
 			for (size_t i = 0; i < newTrajectories.size(); i++)
 			{
 				trajectories[i].positions = std::move(newTrajectories[i].positions);
@@ -155,10 +158,13 @@ namespace TestBodies
 	{
 		ImGui::Text("Simulated Seconds: %.1f [s]", TestBodies::SimulatedSeconds);
 		ImGui::SameLine();
-		if (ImGui::Button("Simulate"))
-			TestBodies::Simulate(10.0);
-		ImGui::SameLine();
 		ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
+
+		static int32_t simulateTime = 10;
+		ImGui::InputInt("Time: ", &simulateTime);
+		ImGui::SameLine();
+		if (ImGui::Button("Simulate"))
+			Simulate((double)simulateTime);
 
 		ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds); ImGui::SameLine(); ImGui::Text("[s]");
 
@@ -185,7 +191,43 @@ namespace TestBodies
 		}
 	}
 
-	void Setup()
+	void SetupSolarSystemWip()
+	{
+		double massSun = 1.989e30;
+		double massEarth = 5.972e24;
+		double massMoon = 7.348e22;
+		double gravitationalConstant = 6.6743e-11;
+		double distanceSunEarth = 1.518e11;
+		double distanceEarthMoon = 3.844e8;
+		double velocityEarth = 2.9722e4;
+		double velocityMoon = 1.020e3;
+
+		double massScaler = 1.0e24;
+		double distanceScaler = 1.0e10;
+
+		//GravitationalConstant = gravitationalConstant; // *(massScaler / distanceScaler);
+		GravitationalConstant = gravitationalConstant * massScaler / (distanceScaler * distanceScaler * distanceScaler);
+		SimulationDt = 60 * 60;
+		GravityThreshold = 0.001 / distanceScaler;
+
+		auto createBody = [](double positionX, double velocityY, double mass)
+		{
+			auto position = vec2d(positionX, 0.0);
+			auto velocity = vec2d(0.0, velocityY);
+
+			bodiesEuler.AddBody(position, velocity, mass);
+			bodiesVerlet.AddBody(position, velocity, mass);
+			bodiesRungeKutta.AddBody(position, velocity, mass);
+			colors.push_back(Utils::GetRandomColor());
+		};
+
+		createBody(0.0, 0.0, massSun / massScaler);
+		createBody(distanceSunEarth / distanceScaler, velocityEarth / distanceScaler, massEarth / massScaler);
+		createBody((distanceSunEarth + distanceEarthMoon) / distanceScaler, (velocityMoon + velocityEarth) / distanceScaler, massMoon / massScaler);
+
+	}
+
+	void SetupRandomBodies()
 	{
 		auto cameraHsize = getCameraSize() / 2.0f;
 
@@ -201,8 +243,19 @@ namespace TestBodies
 			bodiesRungeKutta.AddBody(position, velocity);
 			colors.push_back(Utils::GetRandomColor());
 		}
+	}
 
-		Simulate(SimulatedSeconds);
+	void Setup()
+	{
+
+		SetupRandomBodies();
+		//SetupSolarSystemWip();
+
+		//bodiesEuler.currentPoints[1].initializeCircularOrbit({ 0.0,0.0 }, massSun / massScaler);
+
+		Simulate();
+
+		//Simulate(SimulatedSeconds);
 	}
 
 	void UdpateCurrentTime()

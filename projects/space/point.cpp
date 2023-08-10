@@ -113,11 +113,13 @@ PointRungeKutta::PointRungeKutta(const Magnum2D::vec2d& pos, const Magnum2D::vec
 	setVelocity(vel);
 }
 
-// https://gafferongames.com/post/integration_basics/
 void PointRungeKutta::step(double dt)
 {
-	position = position + dposdt * dt;
-	velocity = velocity + dveldt * dt;
+	vec2d vel = (1.0 / 6.0) * (k1.velocity + 2.0 * (k2.velocity + k3.velocity) + k4.velocity);
+	vec2d acc = (1.0 / 6.0) * (k1.acceleration + 2.0 * (k2.acceleration + k3.acceleration) + k4.acceleration);
+
+	position = position + vel * dt;
+	velocity = velocity + acc * dt;
 }
 
 void PointRungeKutta::setVelocity(const vec2d& vel)
@@ -165,4 +167,9 @@ void MassPoint::setMass(double newMass)
 double MassPoint::getEffectiveRadius() const
 {
 	return effectiveRadius;
+}
+
+double MassPoint::getEffectiveRadiusSqr() const
+{
+	return effectiveRadiusSqr;
 }

@@ -18,6 +18,7 @@ struct MassPoint
 	void setMass(double mass);
 
 	double getEffectiveRadius() const;
+	double getEffectiveRadiusSqr() const;
 	void recomputeEffectiveRadius();
 
 protected:
@@ -45,9 +46,6 @@ struct Point : public MassPoint
 	template<class T>
 	void prepareStep(const std::vector<T>& massPoints, float, size_t thisIndex = -1)
 	{
-		Magnum2D::vec2d acc;
-		for (const auto& m : massPoints)
-			acc += attractForce(m.position, m.getMass()) / mass;
 		acceleration = computeAcceleration(massPoints, thisIndex);
 	}
 
@@ -70,9 +68,9 @@ struct Point : public MassPoint
 		{
 			if (i == thisIndex)
 				continue;
-
-			if (Utils::DistanceSqr(massPoints[i].position, position) > effectiveRadiusSqr)
-				continue;
+			// TODO
+			//if (Utils::DistanceSqr(massPoints[i].position, position) > massPoints[i].getEffectiveRadiusSqr())
+			//	continue;
 
 			result += attractForce(massPoints[i].position, massPoints[i].getMass()) / mass;
 		}
@@ -114,38 +112,97 @@ struct PointRungeKutta : public Point
 
 	Magnum2D::vec2d velocity;
 
-	Magnum2D::vec2d dposdt;
-	Magnum2D::vec2d dveldt;
+	Magnum2D::vec2d positionTemp;
 
-	template<class T>
-	void prepareStep(const std::vector<T>& massPoints, float dt, size_t thisIndex = -1)
+	struct State
 	{
-		struct Derivative
+		Magnum2D::vec2d velocity;
+		Magnum2D::vec2d acceleration;
+	};
+	State k1;
+	State k2;
+	State k3;
+	State k4;
+
+	// TODO fix somehow
+	Magnum2D::vec2d attractForceTemp(Magnum2D::vec2d pointPosition, double pointMass) const
+	{
+		// TODO optimize square length
+		Magnum2D::vec2d dir = (pointPosition - positionTemp);
+		double distance = dir.length();
+
+		if (distance == 0.0)
+			return {};
+
+		dir = dir.normalized();
+
+		return ((GravitationalConstant * pointMass * mass / (distance * distance))) * dir;
+	}
+	Magnum2D::vec2d computeAccelerationTemp(const std::vector<PointRungeKutta>& massPoints, size_t thisIndex)
+	{
+		Magnum2D::vec2d result;
+
+		for (size_t i = 0; i < massPoints.size(); i++)
 		{
-			Magnum2D::vec2d dpos;
-			Magnum2D::vec2d dvel;
-		};
+			if (i == thisIndex)
+				continue;
 
-		auto evaluate = [&](double dt, const Derivative& d)
-		{
-			PointRungeKutta state = *this;
-			state.position = position + d.dpos * dt;
-			state.velocity = velocity + d.dvel * dt;
+			//if (Utils::DistanceSqr(massPoints[i].position, position) > massPoints[i].getEffectiveRadiusSqr())
+			//	continue;
 
-			Derivative output;
-			output.dpos = state.velocity;
-			output.dvel = state.computeAcceleration(massPoints, thisIndex);
+			result += attractForceTemp(massPoints[i].positionTemp, massPoints[i].getMass()) / mass;
+		}
 
-			return output;
-		};
+		return result;
+	}
 
-		auto a = evaluate(0.0, {});
-		auto b = evaluate(dt * 0.5, a);
-		auto c = evaluate(dt * 0.5, b);
-		auto d = evaluate(dt, c);
+	void stepK1Begin(double)
+	{
+		// the points starts at the beginning
+		positionTemp = position;
+	}
 
-		dposdt = (1.0 / 6.0) * (a.dpos + 2.0 * (b.dpos + c.dpos) + d.dpos);
-		dveldt = (1.0 / 6.0) * (a.dvel + 2.0 * (b.dvel + c.dvel) + d.dvel);
+	void stepK1End(const std::vector<PointRungeKutta>& massPoints, double, size_t thisIndex)
+	{
+		k1.acceleration = computeAccelerationTemp(massPoints, thisIndex);
+		k1.velocity = velocity;
+	}
+
+	void stepK2Begin(double dt)
+	{
+		// move each point to temporary position at dt/2 using the velocity from previous step
+		positionTemp = position + k1.velocity * (dt / 2.0);
+	}
+
+	void stepK2End(const std::vector<PointRungeKutta>& massPoints, double dt, size_t thisIndex)
+	{
+		// when points are at new position, fill in the state
+		// we will use acceleration from the beginning to modify the velicity, because it was affecting velocity for dt/2 time
+		k2.acceleration = computeAccelerationTemp(massPoints, thisIndex);
+		k2.velocity = velocity + k1.acceleration * (dt / 2.0);
+	}
+
+	void stepK3Begin(double dt)
+	{
+		positionTemp = position + k2.velocity * (dt / 2.0);
+	}
+
+	void stepK3End(const std::vector<PointRungeKutta>& massPoints, double dt, size_t thisIndex)
+	{
+		// here not sure what acceleration to use
+		k3.acceleration = computeAccelerationTemp(massPoints, thisIndex);
+		k3.velocity = velocity + k1.acceleration * (dt / 2.0);
+	}
+
+	void stepK4Begin(double dt)
+	{
+		positionTemp = position + k3.velocity * dt;
+	}
+
+	void stepK4End(const std::vector<PointRungeKutta>& massPoints, double dt, size_t thisIndex)
+	{
+		k4.acceleration = computeAccelerationTemp(massPoints, thisIndex);
+		k4.velocity = velocity + k1.acceleration * dt;
 	}
 
 	void step(double dt) override;
