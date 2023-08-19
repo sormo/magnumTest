@@ -17,7 +17,7 @@ struct Ship
 
 	Trajectory trajectoryEuler;
 	Trajectory trajectoryVerlet;
-	Trajectory trajectoryRungeKuta;
+	//Trajectory trajectoryRungeKuta;
 	std::vector<BurnPtr> burns;
 	BurnsHandler burnsHandler;
 };

@@ -46,7 +46,7 @@ bool VectorHandler::Update()
 			if (vectors[i].onToChange)
 			{
 				Magnum2D::vec2 offsetTo = position - vectors[i].to;
-				if (offsetTo.length() < GrabToRadius)
+				if (offsetTo.length() < Common::GetZoomIndependentSize(GrabToRadius))
 				{
 					grabVec = i;
 					grabType = HandleType::To;
@@ -104,12 +104,12 @@ void VectorHandler::Draw()
 		if (vectors[i].onFromChange)
 		{
 			Magnum2D::col3 circleColorFrom = highlightVec && *highlightVec == i && highlightType == HandleType::From ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-			Magnum2D::drawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), circleColorFrom);
+			Common::DrawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), 0.03f, circleColorFrom);
 		}
 		if (vectors[i].onToChange)
 		{
 			Magnum2D::col3 circleColorTo = highlightVec && *highlightVec == i && highlightType == HandleType::To ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-			Magnum2D::drawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), circleColorTo);
+			Common::DrawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), 0.03f, circleColorTo);
 		}
 		Magnum2D::drawCircle(vectors[i].from, Common::GetZoomIndependentSize(0.03f), Magnum2D::rgb(10, 200, 10));
 	}

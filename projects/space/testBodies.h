@@ -8,6 +8,7 @@ extern double SimulationDt;
 
 namespace TestBodies
 {
+	int32_t TrajectoryPointCount = 300;
 	float SimulatedSeconds = 0.0f;
 	float CurrentTime = 0.0f;
 	bool IsPlaying = false;
@@ -62,7 +63,7 @@ namespace TestBodies
 			std::vector<std::vector<BurnPtr>> burns(initialPoints.size());
 			currentPoints = initialPoints;
 
-			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, 0.0, 60);
+			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, 0.0, TrajectoryPointCount);
 			for (size_t i = 0; i < newTrajectories.size(); i++)
 			{
 				trajectories[i].positions = std::move(newTrajectories[i].positions);
@@ -75,7 +76,7 @@ namespace TestBodies
 		void SimulateExtend(double time)
 		{
 			std::vector<std::vector<BurnPtr>> burns(currentPoints.size());
-			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, currentSimulatedSeconds, 60);
+			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, currentSimulatedSeconds, TrajectoryPointCount);
 			for (size_t i = 0; i < newTrajectories.size(); i++)
 				trajectories[i].extend(std::move(newTrajectories[i]));
 
@@ -159,6 +160,9 @@ namespace TestBodies
 		ImGui::Text("Simulated Seconds: %.1f [s]", TestBodies::SimulatedSeconds);
 		ImGui::SameLine();
 		ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
+
+		if (ImGui::SliderInt("Trajectory Point Count", &TrajectoryPointCount, 100, 1000))
+			Simulate();
 
 		static int32_t simulateTime = 10;
 		ImGui::InputInt("Time: ", &simulateTime);

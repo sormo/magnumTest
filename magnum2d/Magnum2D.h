@@ -47,10 +47,13 @@ namespace Magnum2D
 
 	void drawPolyline(const std::vector<vec2>& points, col3 color);
 	void drawPolyline(std::span<vec2> points, col3 color);
+	void drawPolyline2(std::span<vec2> points, float width, col3 color);
 	void drawLines(const std::vector<vec2>& points, col3 color);
+	void drawLines2(std::vector<vec2>& points, float width, col3 color);
 
 	void drawCircle(vec2 center, float radius, col3 color);
 	void drawCircleOutline(vec2 center, float radius, col3 color);
+	void drawCircleOutline2(vec2 center, float radius, float width, col3 color);
 	
 	void drawRectangle(vec2 center, float width, float height, col3 color);
 	void drawRectangle(vec2 center, float rotation, float width, float height, col3 color);

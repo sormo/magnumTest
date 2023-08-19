@@ -108,14 +108,14 @@ void Trajectory::draw(double fromTime, double toTime, Magnum2D::col3 color)
 	auto fromIndex = getPoint(fromTime);
 	auto toIndex = getPoint(toTime);
 
-	drawPolyline(std::span(std::begin(positions) + fromIndex, toIndex - fromIndex), color);
+	Common::DrawPolyline(std::span(std::begin(positions) + fromIndex, toIndex - fromIndex), 0.05f, color);
 
 	Utils::DrawCross(positions[fromIndex], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
 }
 
 void Trajectory::draw(col3 color)
 {
-	drawPolyline(positions, color);
+	Common::DrawPolyline(positions, 0.05f, color);
 
 	Utils::DrawCross(positions[0], Common::GetZoomIndependentSize(0.3f), rgb(200, 200, 200));
 }

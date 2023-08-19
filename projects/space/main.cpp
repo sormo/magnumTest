@@ -48,6 +48,7 @@ void gui()
 		ImGui::Text("Time"); ImGui::SameLine(100); ImGui::Text("%.3f ms/frame(% .1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		ImGui::Text("Delta time"); ImGui::SameLine(100); ImGui::Text("%.3f ms", getDeltaTimeMs());
 		ImGui::Text("Time"); ImGui::SameLine(100); ImGui::Text("%.3f s", getTimeMs() / 1000.0f);
+		ImGui::Checkbox("Antialised Lines", &Common::IsAntialisedLinesEnabled);
 	}
 
 	if (ImGui::CollapsingHeader("Window"))
@@ -162,5 +163,4 @@ void draw()
 	}
 
 	camera.Update(allowCameraMove);
-
 }

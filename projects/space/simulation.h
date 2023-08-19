@@ -8,21 +8,27 @@ namespace Simulation
 	using namespace Magnum2D;
 
 	template<typename T>
+	void ApplyBurnIfNeeded(T& point, const std::vector<BurnPtr>& burns, size_t& currentBurn, double accumulatedTime)
+	{
+		if (currentBurn == burns.size())
+			return;
+
+		Burn* burn = burns[currentBurn].get();
+
+		if (accumulatedTime >= burn->time)
+		{
+			point.addVelocity(burn->velocity);
+			burn->simulatedPosition = point.position;
+			currentBurn++;
+		}
+	}
+
+	template<typename T>
 	void ApplyBurns(std::vector<T>& points, const std::vector<std::vector<BurnPtr>>& burns, std::vector<size_t>& burnIndex, double accumulatedTime)
 	{
-		for (size_t j = 0; j < burns.size(); j++)
+		for (size_t j = 0; j < points.size(); j++)
 		{
-			if (burnIndex[j] < burns[j].size())
-			{
-				Burn* burn = burns[j][burnIndex[j]].get();
-
-				if (accumulatedTime >= burn->time)
-				{
-					points[j].addVelocity(burn->velocity);
-					burn->simulatedPosition = points[j].position;
-					burnIndex[j]++;
-				}
-			}
+			ApplyBurnIfNeeded(points[j], burns[j], burnIndex[j], accumulatedTime);
 		}
 	}
 
@@ -72,8 +78,8 @@ namespace Simulation
 			accumulatedTime += dt;
 
 			// update trajectories
-			//int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
-			//if (expectedPoints > points.size())
+			int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
+			if (expectedPoints > result[0].times.size())
 			{
 				for (size_t j = 0; j < points.size(); j++)
 				{
@@ -143,8 +149,8 @@ namespace Simulation
 			accumulatedTime += dt;
 
 			// update trajectories
-			//int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
-			//if (expectedPoints > points.size())
+			int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
+			if (expectedPoints > result[0].times.size())
 			{
 				for (size_t j = 0; j < points.size(); j++)
 				{
@@ -191,8 +197,8 @@ namespace Simulation
 			point.step(dt);
 
 			accumulatedTime += dt;
-			//int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
-			//if (expectedPoints > points.size())
+			int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
+			if (expectedPoints > times.size())
 			{
 				points.push_back(point.position);
 				times.push_back(accumulatedTime);

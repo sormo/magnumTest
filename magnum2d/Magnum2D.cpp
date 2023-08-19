@@ -9,6 +9,8 @@
 #include <Magnum/Math/ConfigurationValue.h>
 #include <Magnum/Math/DualComplex.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/MeshTools/CompileLines.h>
+#include <Magnum/MeshTools/GenerateLines.h>
 #ifndef CORRADE_TARGET_EMSCRIPTEN
 #include <Magnum/Platform/Sdl2Application.h>
 #else
@@ -17,20 +19,34 @@
 #include <Magnum/Primitives/Square.h>
 #include <Magnum/Primitives/Circle.h>
 #include <Magnum/Shaders/FlatGL.h>
+#include <Magnum/Shaders/LineGL.h>
 #include <Magnum/Trade/MeshData.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 
 #include <iostream>
+#include <string_view>
 #include <vector>
 #include <memory>
 #include <chrono>
 #include <map>
+#include <set>
 
 void setup();
 void draw(); 
 
 using namespace Magnum;
 using namespace Math::Literals;
+
+using bytes = std::span<const std::byte>;
+
+template <>
+struct std::hash<bytes>
+{
+    std::size_t operator()(const bytes& x) const noexcept
+    {
+        return std::hash<std::string_view>{}({ reinterpret_cast<const char*>(x.data()), x.size() });
+    }
+};
 
 struct InstanceData
 {
@@ -47,7 +63,7 @@ struct DrawMesh
         mesh.addVertexBufferInstanced(instanceBuffer, 1, 0, Shaders::FlatGL2D::TransformationMatrix{}, Shaders::FlatGL2D::Color3{});
     }
 
-    void Draw(Magnum::Shaders::Flat2D& shader, Math::Matrix3<float>& projection)
+    void Draw(Magnum::Shaders::FlatGL2D& shader, Math::Matrix3<float>& projection)
     {
         if (instanceData.empty())
             return;
@@ -82,6 +98,7 @@ public:
 
     Shaders::FlatGL2D m_shader{ NoCreate };
     Shaders::FlatGL2D m_shaderDefault;
+    Shaders::LineGL2D m_lineShader;
 
     DrawMesh m_circle;
     DrawMesh m_circleOutline;
@@ -122,6 +139,12 @@ public:
     std::chrono::time_point<std::chrono::high_resolution_clock> m_startApplication;
     std::chrono::time_point<std::chrono::high_resolution_clock> m_startFrame;
     float m_frameDeltaMs = 0.0f;
+
+    std::map<size_t, GL::Mesh> m_lineMeshCache;
+    std::set<size_t> m_lineMeshCacheDrawn;
+
+    // Mesh for circle with width
+    GL::Mesh m_circleLineMesh;
 };
 
 Platform::Application::Configuration CreateConfiguration()
@@ -154,6 +177,9 @@ MyApplication::MyApplication(const Arguments& arguments)
     auto shaderConfig = Shaders::FlatGL2D::Configuration{};
     shaderConfig.setFlags(Shaders::FlatGL2D::Flag::VertexColor | Shaders::FlatGL2D::Flag::InstancedTransformation );
     m_shader = Shaders::FlatGL2D{ shaderConfig };
+
+    // Mesh for nice circle outlines
+    m_circleLineMesh = MeshTools::compileLines(MeshTools::generateLines(Primitives::circle2DWireframe(64)));
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN) && !defined(CORRADE_TARGET_ANDROID)
     setSwapInterval(1);
@@ -191,6 +217,16 @@ void MyApplication::drawEvent()
     m_rectanleOutline.Draw(m_shader, m_cameraProjection);
     m_circle.Draw(m_shader, m_cameraProjection);
     m_circleOutline.Draw(m_shader, m_cameraProjection);
+
+    // line cache - clear meshes which were not drawn
+    for (auto it = std::begin(m_lineMeshCache); it != std::end(m_lineMeshCache);)
+    {
+        if (!m_lineMeshCacheDrawn.contains(it->first))
+            it = m_lineMeshCache.erase(it);
+        else
+            it++;
+    }
+    m_lineMeshCacheDrawn.clear();
 
     swapBuffers();
     redraw();
@@ -446,6 +482,22 @@ namespace Magnum2D
         g_application->m_circleOutline.instanceData.push_back({ CreateTransformation(center, 0.0f, { radius, radius }), color });
     }
 
+    void drawCircleOutline2(vec2 center, float radius, float width, col3 color)
+    {
+        //GL::Renderer::enable(GL::Renderer::Feature::Blending);
+        //GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+
+        float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
+        width *= factor;
+
+        g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
+                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection * CreateTransformation(center, 0.0f, { radius, radius }))
+                                   .setColor(color)
+                                   .setWidth(width)
+                                   .setSmoothness(width / 2.0f)
+                                   .draw(g_application->m_circleLineMesh);
+    }
+
     void drawRectangle(vec2 center, float width, float height, col3 color)
     {
         g_application->m_rectanle.instanceData.push_back({ CreateTransformation(center, 0.0f, { width / 2.0f, height / 2.0f }), color });
@@ -492,6 +544,56 @@ namespace Magnum2D
         g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
     }
 
+    Trade::MeshData lineMesh(std::span<vec2> points, MeshPrimitive primitive)
+    {
+        Containers::Array<char> vertexData{sizeof(Vector2)* points.size()};
+        auto positions = Containers::arrayCast<Vector2>(vertexData);
+
+        for (size_t i = 0; i < points.size(); i++)
+            positions[i] = points[i];
+
+        Trade::MeshAttributeData attr{ Trade::MeshAttribute::Position, VertexFormat::Vector2, 0, (uint32_t)points.size(), sizeof(Vector2) };
+
+        return Trade::MeshData{primitive, std::move(vertexData), { attr }};
+    }
+
+    Trade::MeshData lineMeshStrip2D(std::span<vec2> points)
+    {
+        return lineMesh(points, Magnum::MeshPrimitive::LineStrip);
+    }
+
+    Trade::MeshData lineMeshLines(std::span<vec2> points)
+    {
+        return lineMesh(points, Magnum::MeshPrimitive::Lines);
+    }
+
+    void drawPolyline2(std::span<vec2> points, float width, col3 color)
+    {
+        auto hasher = std::hash<bytes>{};
+        size_t hash = hasher(std::as_bytes(std::span(points)));
+
+        if (!g_application->m_lineMeshCache.contains(hash))
+        {
+            auto meshData = lineMeshStrip2D(points);
+            auto meshDataLines = MeshTools::generateLines(meshData);
+            auto meshNew = MeshTools::compileLines(meshDataLines);
+
+            g_application->m_lineMeshCache[hash] = std::move(meshNew);
+        }
+
+        float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
+        width *= factor;
+
+        g_application->m_lineMeshCacheDrawn.insert(hash);
+
+        g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
+                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection)
+                                   .setColor(color)
+                                   .setWidth(width)
+                                   .setSmoothness(width / 2.0f)
+                                   .draw(g_application->m_lineMeshCache[hash]);
+    }
+
     void drawLines(const std::vector<vec2>& points, col3 color)
     {
         GL::Buffer vertices;
@@ -502,6 +604,33 @@ namespace Magnum2D
         mesh.setCount(points.size());
 
         g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+    }
+
+    void drawLines2(std::vector<vec2>& points, float width, col3 color)
+    {
+        auto hasher = std::hash<bytes>{};
+        size_t hash = hasher(std::as_bytes(std::span(points)));
+
+        if (!g_application->m_lineMeshCache.contains(hash))
+        {
+            auto meshData = lineMeshLines(points);
+            auto meshDataLines = MeshTools::generateLines(meshData);
+            auto meshNew = MeshTools::compileLines(meshDataLines);
+
+            g_application->m_lineMeshCache[hash] = std::move(meshNew);
+        }
+
+        float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
+        width *= factor;
+
+        g_application->m_lineMeshCacheDrawn.insert(hash);
+
+        g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
+                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection)
+                                   .setColor(color)
+                                   .setWidth(width)
+                                   .setSmoothness(width / 2.0f)
+                                   .draw(g_application->m_lineMeshCache[hash]);
     }
 
     bool isMousePressed(Mouse mouse)

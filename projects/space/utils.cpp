@@ -35,22 +35,25 @@ namespace Utils
 
 		vec2 destPosition = position + vector;
 		
-		drawLines({ position, destPosition }, color);
+		const float LineWidth = 0.03f;
+
+		Common::DrawLines({ position, destPosition }, LineWidth, color);
 
 		auto arrowDir = (-vector).normalized();
 		auto arrowLeft = RotateVector(arrowDir, ArrowAngle) * Common::GetZoomIndependentSize(ArrowSize);
 		auto arrowRight = RotateVector(arrowDir, -ArrowAngle) * Common::GetZoomIndependentSize(ArrowSize);
 
-		drawLines({ destPosition, destPosition + arrowLeft }, color);
-		drawLines({ destPosition, destPosition + arrowRight }, color);
+		Common::DrawLines({ destPosition, destPosition + arrowLeft }, LineWidth, color);
+		Common::DrawLines({ destPosition, destPosition + arrowRight }, LineWidth, color);
 	}
 
 	void DrawCross(const Magnum2D::vec2& position, float size, const Magnum2D::col3& color)
 	{
+		const float LineWidth = 0.03f;
 		float hsize = size / 2.0f;
 
-		drawLines({ position - vec2(0.0f, hsize), position + vec2(0.0f, hsize) }, color);
-		drawLines({ position - vec2(hsize, 0.0f), position + vec2(hsize, 0.0f) }, color);
+		Common::DrawLines({ position - vec2(0.0f, hsize), position + vec2(0.0f, hsize) }, LineWidth, color);
+		Common::DrawLines({ position - vec2(hsize, 0.0f), position + vec2(hsize, 0.0f) }, LineWidth, color);
 	}
 
 	std::vector<vec2> ConvertToFloat(const std::vector<vec2d>& arr)

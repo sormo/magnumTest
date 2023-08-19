@@ -7,6 +7,7 @@ extern double SimulationDt;
 
 namespace TestMassPoint
 {
+	int32_t TrajectoryPointCount = 300;
 	double SimulationSeconds = 10.0;
 
 	using namespace Magnum2D;
@@ -26,7 +27,7 @@ namespace TestMassPoint
 
 	static void Simulate(Ship& t)
 	{
-		t.Simulate(massPoints, SimulationDt, SimulationSeconds, 60);
+		t.Simulate(massPoints, SimulationDt, SimulationSeconds, TrajectoryPointCount);
 	}
 
 	static void Simulate()
@@ -79,6 +80,9 @@ namespace TestMassPoint
 			TestMassPoint::SimulationSeconds = seconds;
 			TestMassPoint::Simulate();
 		}
+
+		if (ImGui::SliderInt("Trajectory Point Count", &TrajectoryPointCount, 100, 1000))
+			Simulate();
 	}
 
 	static bool Update()
