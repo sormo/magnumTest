@@ -103,21 +103,14 @@ void gui()
 	{
 		ImGui::Combo("Test", (int*)&CurrentTest, "MassPoints\0Bodies\0");
 
-		if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
+		switch (CurrentTest)
 		{
-			if (ImGui::BeginTabItem("MassPoints"))
-			{
-				TestMassPoint::Gui();
-
-				ImGui::EndTabItem();
-			}
-			if (ImGui::BeginTabItem("Bodies"))
-			{
-				TestBodies::Gui();
-
-				ImGui::EndTabItem();
-			}
-			ImGui::EndTabBar();
+		case TestType::MassPoints:
+			TestMassPoint::Gui();
+			break;
+		case TestType::Bodies:
+			TestBodies::Gui();
+			break;
 		}
 	}
 
@@ -125,29 +118,9 @@ void gui()
 	ImGui::End();
 }
 
-void drawCoordinateLines()
-{
-	vec2 bottomLeft = getCameraCenter() - getCameraSize() / 2.0f;
-	vec2 upperRight = getCameraCenter() + getCameraSize() / 2.0f;
-
-	std::vector<vec2> points;
-	for (float x = std::ceil(bottomLeft.x()); x < std::ceil(upperRight.x()); x += 1.0f)
-	{
-		points.push_back({ x, bottomLeft.y() });
-		points.push_back({ x, upperRight.y() });
-	}
-	for (float y = std::ceil(bottomLeft.y()); y < std::ceil(upperRight.y()); y += 1.0f)
-	{
-		points.push_back({ bottomLeft.x(), y });
-		points.push_back({ upperRight.x(), y });
-	}
-
-	drawLines(points, rgb(50, 50, 50));
-}
-
 void draw()
 {
-	drawCoordinateLines();
+	camera.Draw();
 	gui();
 
 	bool allowCameraMove = true;

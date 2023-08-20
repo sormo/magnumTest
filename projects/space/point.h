@@ -72,6 +72,11 @@ struct Point : public MassPoint
 			//if (Utils::DistanceSqr(massPoints[i].position, position) > massPoints[i].getEffectiveRadiusSqr())
 			//	continue;
 
+			// TODO to get acceleration, in force both masses are multiplied and divided by square length.
+			// Here the resulting force is divided by mass of one of the points.
+			// I think there is no need to multiply by the this mass and just use formula a = G * m / (r*r)
+			// Also force for both points is equal, only oposite direction. It is possible to compute for both one direction
+			// and one force size. Is it possible to get oposite direction easily?
 			result += attractForce(massPoints[i].position, massPoints[i].getMass()) / mass;
 		}
 

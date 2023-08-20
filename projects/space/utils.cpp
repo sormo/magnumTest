@@ -35,7 +35,7 @@ namespace Utils
 
 		vec2 destPosition = position + vector;
 		
-		const float LineWidth = 0.03f;
+		const float LineWidth = Common::GetZoomIndependentSize(0.03f);
 
 		Common::DrawLines({ position, destPosition }, LineWidth, color);
 
@@ -49,7 +49,7 @@ namespace Utils
 
 	void DrawCross(const Magnum2D::vec2& position, float size, const Magnum2D::col3& color)
 	{
-		const float LineWidth = 0.03f;
+		const float LineWidth = Common::GetZoomIndependentSize(0.03f);
 		float hsize = size / 2.0f;
 
 		Common::DrawLines({ position - vec2(0.0f, hsize), position + vec2(0.0f, hsize) }, LineWidth, color);

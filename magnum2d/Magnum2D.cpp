@@ -569,6 +569,9 @@ namespace Magnum2D
 
     void drawPolyline2(std::span<vec2> points, float width, col3 color)
     {
+        if (points.size() <= 1)
+            return;
+
         auto hasher = std::hash<bytes>{};
         size_t hash = hasher(std::as_bytes(std::span(points)));
 

@@ -12,7 +12,7 @@ bool VectorHandler::UpdateHighlight()
 		if (vectors[i].onToChange)
 		{
 			Magnum2D::vec2 offsetTo = position - vectors[i].to;
-			if (offsetTo.length() < GrabToRadius)
+			if (offsetTo.length() < Common::GetZoomIndependentSize(GrabToRadius))
 			{
 				highlightVec = i;
 				highlightType = HandleType::To;
@@ -23,7 +23,7 @@ bool VectorHandler::UpdateHighlight()
 		if (vectors[i].onFromChange)
 		{
 			Magnum2D::vec2 offsetFrom = position - vectors[i].from;
-			if (offsetFrom.length() < GrabFromRadius)
+			if (offsetFrom.length() < Common::GetZoomIndependentSize(GrabToRadius))
 			{
 				highlightVec = i;
 				highlightType = HandleType::From;
@@ -59,7 +59,7 @@ bool VectorHandler::Update()
 			if (vectors[i].onFromChange)
 			{
 				Magnum2D::vec2 offsetFrom = position - vectors[i].from;
-				if (offsetFrom.length() < GrabFromRadius)
+				if (offsetFrom.length() < Common::GetZoomIndependentSize(GrabFromRadius))
 				{
 					grabVec = i;
 					grabType = HandleType::From;
@@ -104,20 +104,27 @@ void VectorHandler::Draw()
 		if (vectors[i].onFromChange)
 		{
 			Magnum2D::col3 circleColorFrom = highlightVec && *highlightVec == i && highlightType == HandleType::From ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-			Common::DrawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), 0.03f, circleColorFrom);
+			Common::DrawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), Common::GetZoomIndependentSize(0.03f), circleColorFrom);
 		}
 		if (vectors[i].onToChange)
 		{
 			Magnum2D::col3 circleColorTo = highlightVec && *highlightVec == i && highlightType == HandleType::To ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-			Common::DrawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), 0.03f, circleColorTo);
+			Common::DrawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), Common::GetZoomIndependentSize(0.03f), circleColorTo);
 		}
 		Magnum2D::drawCircle(vectors[i].from, Common::GetZoomIndependentSize(0.03f), Magnum2D::rgb(10, 200, 10));
 	}
 }
 
-void VectorHandler::Push(Vector&& v)
+void VectorHandler::Push(Magnum2D::vec2 from, Magnum2D::vec2 to, void* context, OnChange onFromChange, OnChange onToChange)
 {
-	vectors.push_back(std::move(v));
+	Vector newVector;
+	newVector.from = from;
+	newVector.to = to;
+	newVector.context = context;
+	newVector.onFromChange = onFromChange;
+	newVector.onToChange = onToChange;
+
+	vectors.push_back(std::move(newVector));
 }
 
 void VectorHandler::Clear()

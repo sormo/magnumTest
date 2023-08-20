@@ -82,7 +82,7 @@ void BurnsHandler::NewBurn(Burn* burn)
 		return trajectory->positions[result];
 	};
 
-	vectorHandler.Push({ from, to, burn, modifyFrom, modifyTo });
+	vectorHandler.Push(from, to, burn, modifyFrom, modifyTo);
 }
 
 void BurnsHandler::Refresh()

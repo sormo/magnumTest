@@ -79,7 +79,7 @@ namespace Simulation
 
 			// update trajectories
 			int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
-			if (expectedPoints > result[0].times.size())
+			if (!result.empty() && expectedPoints > result[0].times.size())
 			{
 				for (size_t j = 0; j < points.size(); j++)
 				{
@@ -150,7 +150,7 @@ namespace Simulation
 
 			// update trajectories
 			int32_t expectedPoints = (accumulatedTime * (double)numPoints) / seconds;
-			if (expectedPoints > result[0].times.size())
+			if (!result.empty() && expectedPoints > result[0].times.size())
 			{
 				for (size_t j = 0; j < points.size(); j++)
 				{

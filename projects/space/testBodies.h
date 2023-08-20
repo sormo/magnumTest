@@ -12,6 +12,10 @@ namespace TestBodies
 	float SimulatedSeconds = 0.0f;
 	float CurrentTime = 0.0f;
 	bool IsPlaying = false;
+
+	enum DrawFlag { DrawFlagEuler = 0x1, DrawFlagVerlet = 0x2, DrawFlagRungeKutta = 0x4 };
+	int32_t DrawFlags = DrawFlagEuler | DrawFlagVerlet | DrawFlagRungeKutta;
+
 	std::optional<size_t> CurrentBody;
 
 	Utils::ClickHandler clickHandler;
@@ -28,6 +32,8 @@ namespace TestBodies
 	template <typename T>
 	struct Bodies
 	{
+		const float ForceDrawFactor = 0.2f;
+
 		size_t AddBody(vec2d position, vec2d velocity, double mass = 1.0)
 		{
 			initialPoints.emplace_back(position, velocity);
@@ -37,23 +43,22 @@ namespace TestBodies
 			initialPoints.back().setMass(mass);
 			currentPoints.back().setMass(mass);
 
-			VectorHandler::Vector vec;
-			vec.from = (vec2)position;
-			vec.to = (vec2)(position + velocity);
-			vec.onFromChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
+			vec2 from = (vec2)position;
+			vec2 to = (vec2)(position + velocity * ForceDrawFactor);
+			VectorHandler::OnChange onFromChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
 			{
 				initialPoints[index].position = (vec2d)v;
 				//SimulateClear(SimulatedSeconds);
 				return v;
 			};
-			vec.onToChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
+			VectorHandler::OnChange onToChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
 			{
-				initialPoints[index].setVelocity((vec2d)v - initialPoints[index].position);
+				initialPoints[index].setVelocity((vec2d)(v / ForceDrawFactor) - initialPoints[index].position);
 				//SimulateClear(SimulatedSeconds);
 				return v;
 			};
 
-			vectorHandler.Push(std::move(vec));
+			vectorHandler.Push(from, to, nullptr, onFromChange, onToChange);
 
 			return initialPoints.size() - 1;
 		}
@@ -97,6 +102,9 @@ namespace TestBodies
 
 		vec2 GetPosition(size_t index, double time)
 		{
+			if (time == 0.0)
+				return (vec2)initialPoints[index].position;
+
 			return trajectories[index].positions[trajectories[index].getPoint(time)];
 		}
 
@@ -122,8 +130,10 @@ namespace TestBodies
 		{
 			bodiesEuler.initialPoints[i].position = bodiesRungeKutta.initialPoints[i].position;
 			bodiesEuler.initialPoints[i].setVelocity(bodiesRungeKutta.initialPoints[i].velocity);
+			bodiesEuler.initialPoints[i].setMass(bodiesRungeKutta.initialPoints[i].getMass());
 			bodiesVerlet.initialPoints[i].position = bodiesRungeKutta.initialPoints[i].position;
 			bodiesVerlet.initialPoints[i].setVelocity(bodiesRungeKutta.initialPoints[i].velocity);
+			bodiesVerlet.initialPoints[i].setMass(bodiesRungeKutta.initialPoints[i].getMass());
 		}
 	}
 
@@ -164,11 +174,15 @@ namespace TestBodies
 		if (ImGui::SliderInt("Trajectory Point Count", &TrajectoryPointCount, 100, 1000))
 			Simulate();
 
-		static int32_t simulateTime = 10;
-		ImGui::InputInt("Time: ", &simulateTime);
+		static float simulateTime = 1.0f;
+		ImGui::InputFloat("Time: ", &simulateTime, 0.5f, 15.0f);
 		ImGui::SameLine();
 		if (ImGui::Button("Simulate"))
 			Simulate((double)simulateTime);
+
+		ImGui::CheckboxFlags("Euler", &DrawFlags, DrawFlagEuler); ImGui::SameLine();
+		ImGui::CheckboxFlags("Verlet", &DrawFlags, DrawFlagVerlet); ImGui::SameLine();
+		ImGui::CheckboxFlags("RungeKutta", &DrawFlags, DrawFlagRungeKutta);
 
 		ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds); ImGui::SameLine(); ImGui::Text("[s]");
 
@@ -189,6 +203,7 @@ namespace TestBodies
 			{
 				bodyInit.setMass(mass);
 				bodyCurrent.setMass(mass);
+				SynchronizeWithRungeKutta();
 				Simulate();
 			} 
 			ImGui::SameLine(); ImGui::Text("[kg]");
@@ -209,7 +224,9 @@ namespace TestBodies
 		double massScaler = 1.0e24;
 		double distanceScaler = 1.0e10;
 
-		//GravitationalConstant = gravitationalConstant; // *(massScaler / distanceScaler);
+		//double massScaler = 1.0;
+		//double distanceScaler = 1.0;
+
 		GravitationalConstant = gravitationalConstant * massScaler / (distanceScaler * distanceScaler * distanceScaler);
 		SimulationDt = 60 * 60;
 		GravityThreshold = 0.001 / distanceScaler;
@@ -228,6 +245,46 @@ namespace TestBodies
 		createBody(0.0, 0.0, massSun / massScaler);
 		createBody(distanceSunEarth / distanceScaler, velocityEarth / distanceScaler, massEarth / massScaler);
 		createBody((distanceSunEarth + distanceEarthMoon) / distanceScaler, (velocityMoon + velocityEarth) / distanceScaler, massMoon / massScaler);
+
+	}
+
+	void SetupSolarSystemWip2()
+	{
+		double pi = 3.141592654;
+		double kilometer = 1.0 / (1.5e8);
+		double meter = kilometer / (1e3);
+		double kilogram = 1.0 / (2e30);
+		double second = 1e-7 / pi;
+		double minute = 60.0 * second;
+		double hour = 60.0 * minute;
+		double day = 24.0f * hour;
+
+		double massSun = 1.989e30 * kilogram;
+		double massEarth = 5.972e24 * kilogram;
+		double massMoon = 7.348e22 * kilogram;
+		//double gravitationalConstant = 6.6743e-11;
+		double distanceSunEarth = 1.518e11 * meter;
+		double distanceEarthMoon = 3.844e8 * meter;
+		double velocityEarth = 2.9722e4 * meter / second;
+		double velocityMoon = 1.020e3 * meter / second;
+
+		GravitationalConstant = 4.0 * pi * pi;
+		SimulationDt = hour;
+
+		auto createBody = [](double positionX, double velocityY, double mass)
+		{
+			auto position = vec2d(positionX, 0.0);
+			auto velocity = vec2d(0.0, velocityY);
+
+			bodiesEuler.AddBody(position, velocity, mass);
+			bodiesVerlet.AddBody(position, velocity, mass);
+			bodiesRungeKutta.AddBody(position, velocity, mass);
+			colors.push_back(Utils::GetRandomColor());
+		};
+
+		createBody(0.0, 0.0, massSun);
+		createBody(distanceSunEarth, velocityEarth, massEarth);
+		createBody((distanceSunEarth + distanceEarthMoon), (velocityMoon + velocityEarth), massMoon);
 
 	}
 
@@ -251,13 +308,12 @@ namespace TestBodies
 
 	void Setup()
 	{
-
-		SetupRandomBodies();
-		//SetupSolarSystemWip();
+		//SetupRandomBodies();
+		SetupSolarSystemWip2();
 
 		//bodiesEuler.currentPoints[1].initializeCircularOrbit({ 0.0,0.0 }, massSun / massScaler);
 
-		Simulate();
+		//Simulate();
 
 		//Simulate(SimulatedSeconds);
 	}
@@ -272,15 +328,18 @@ namespace TestBodies
 
 	void Draw()
 	{
-		bodiesEuler.Draw(rgb(50, 50, 50));
-		bodiesVerlet.Draw(rgb(100, 100, 100));
-		bodiesRungeKutta.Draw(colors);
+		if (DrawFlags & DrawFlagEuler)
+			bodiesEuler.Draw(rgb(50, 50, 50));
+		if (DrawFlags & DrawFlagVerlet)
+			bodiesVerlet.Draw(rgb(100, 100, 100));
+		if (DrawFlags & DrawFlagRungeKutta)
+			bodiesRungeKutta.Draw(colors);
 		bodiesRungeKutta.vectorHandler.Draw();
 
 		for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
 		{
 			col3 color = CurrentBody && *CurrentBody == i ? rgb(50, 200, 50) : rgb(50, 50, 200);
-			drawCircle((vec2)bodiesRungeKutta.GetPosition(i, CurrentTime), 0.1f, color);
+			drawCircle((vec2)bodiesRungeKutta.GetPosition(i, CurrentTime), Common::GetZoomIndependentSize(0.1f), color);
 		}
 
 		if (CurrentBody)
@@ -321,7 +380,7 @@ namespace TestBodies
 			for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
 			{
 				vec2 position = (vec2)bodiesRungeKutta.GetPosition(i, CurrentTime);
-				if ((position - mousePosition).length() < 0.2f)
+				if ((position - mousePosition).length() < Common::GetZoomIndependentSize(0.2f))
 				{
 					CurrentBody = i;
 					break;

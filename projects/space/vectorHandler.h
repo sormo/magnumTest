@@ -8,15 +8,7 @@ struct VectorHandler
 	const float GrabFromRadius = 0.1f;
 	const float GrabToRadius = 0.3f;
 
-	struct Vector
-	{
-		Magnum2D::vec2 from;
-		Magnum2D::vec2 to;
-		void* context;
-
-		std::function<Magnum2D::vec2(const Magnum2D::vec2&, void*)> onFromChange;
-		std::function<Magnum2D::vec2(const Magnum2D::vec2&, void*)> onToChange;
-	};
+	using OnChange = std::function<Magnum2D::vec2(const Magnum2D::vec2&, void*)>;
 
 	// return true if some vector handle is highlighted
 	bool UpdateHighlight();
@@ -25,7 +17,7 @@ struct VectorHandler
 
 	void Draw();
 
-	void Push(Vector&& v);
+	void Push(Magnum2D::vec2 from, Magnum2D::vec2 to, void* context, OnChange onFromChange, OnChange onToChange);
 
 	void Clear();
 
@@ -42,6 +34,16 @@ struct VectorHandler
 	}
 
 private:
+	struct Vector
+	{
+		Magnum2D::vec2 from;
+		Magnum2D::vec2 to;
+		void* context = nullptr;
+
+		OnChange onFromChange;
+		OnChange onToChange;
+	};
+
 	std::vector<Vector> vectors;
 
 	enum class HandleType { From, To };
