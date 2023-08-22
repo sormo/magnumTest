@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
+#include <string>
 #include <span>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Vector2.h>
+#include <Magnum/Math/Range.h>
 
 // these two functions must be implemented by application
 void setup();
@@ -15,6 +17,7 @@ namespace Magnum2D
 
 	using vec2 = Magnum::Math::Vector2<float>;
 	using vec2d = Magnum::Math::Vector2<double>;
+	using rectangle = Magnum::Math::Range2D<float>;
 
 	vec2 getWindowSize();
 	bool isWindowResized();
@@ -59,4 +62,8 @@ namespace Magnum2D
 	void drawRectangle(vec2 center, float rotation, float width, float height, col3 color);
 	
 	void drawPolygon(const std::vector<vec2>& points, col3 color);
+
+	enum class TextAlign { TopLeft, TopMiddle, TopRight, MiddleLeft, MiddleMiddle, MiddleRight, BottomLeft, BottomMiddle, BottomRight };
+	void drawText(vec2 position, const std::string& text, float height, col3 color, TextAlign align = TextAlign::BottomLeft);
+	rectangle getTextRectangle(vec2 position, const std::string& text, float height, TextAlign align);
 }

@@ -1,6 +1,7 @@
 #include "Magnum2D.h"
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Utility/Arguments.h>
+#include <Corrade/Utility/Debug.h>
 #include <Magnum/GL/Context.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Buffer.h>
@@ -20,8 +21,13 @@
 #include <Magnum/Primitives/Circle.h>
 #include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Shaders/LineGL.h>
+#include <Magnum/Shaders/DistanceFieldVectorGL.h>
 #include <Magnum/Trade/MeshData.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
+#include <Magnum/Trade/AbstractImporter.h>
+#include <Magnum/Text/AbstractFont.h>
+#include <Magnum/Text/GlyphCache.h>
+#include <Magnum/Text/Renderer.h>
 
 #include <iostream>
 #include <string_view>
@@ -81,6 +87,47 @@ struct DrawMesh
 class MyApplication;
 MyApplication* g_application;
 
+bool SigmaCompare(float a, float b)
+{
+    static const float Sigma = 0.1f;
+    return std::fabs(a - b) <= Sigma;
+}
+
+struct LineMeshCache
+{
+    GL::Mesh* Get(size_t hash);
+    GL::Mesh* Add(size_t hash, std::span<Magnum2D::vec2> points);
+    void Update();
+
+    std::map<size_t, GL::Mesh> cache;
+    std::set<size_t> cacheDrawn;
+};
+
+struct TextRendererCache
+{
+    struct Key
+    {
+        float height;
+        UnsignedByte alignment;
+
+        bool operator==(const Key& o)
+        {
+            return alignment == o.alignment && SigmaCompare(height, o.height);
+        }
+        bool operator<(const Key& o) const
+        {
+            return height < o.height;
+        }
+    };
+
+    Text::Renderer2D* Get(float height, UnsignedByte alignment);
+    Text::Renderer2D* Add(float height, UnsignedByte alignment);
+    void Update();
+
+    std::map<Key, std::unique_ptr<Text::Renderer2D>> cache;
+    std::set<Key> cacheDrawn;
+};
+
 class MyApplication : public Platform::Application
 {
 public:
@@ -96,9 +143,15 @@ public:
     void mouseScrollEvent(MouseScrollEvent& event) override;
     void textInputEvent(TextInputEvent& event) override;
 
+    PluginManager::Manager<Trade::AbstractImporter> m_importerManager;
+    PluginManager::Manager<Text::AbstractFont> m_fontManager;
+    Containers::Pointer<Text::AbstractFont> m_font;
+    Containers::Pointer<Text::GlyphCache> m_fontGlyphCache;
+
     Shaders::FlatGL2D m_shader{ NoCreate };
     Shaders::FlatGL2D m_shaderDefault;
     Shaders::LineGL2D m_lineShader;
+    Shaders::DistanceFieldVectorGL2D m_textShader;
 
     DrawMesh m_circle;
     DrawMesh m_circleOutline;
@@ -112,6 +165,7 @@ public:
     bool m_windowResized = true;
 
     void setupCamera();
+    void setupText();
 
     ImGuiIntegration::Context g_imgui{ NoCreate };
     void imguiInit();
@@ -140,8 +194,8 @@ public:
     std::chrono::time_point<std::chrono::high_resolution_clock> m_startFrame;
     float m_frameDeltaMs = 0.0f;
 
-    std::map<size_t, GL::Mesh> m_lineMeshCache;
-    std::set<size_t> m_lineMeshCacheDrawn;
+    LineMeshCache m_lineMeshCache;
+    TextRendererCache m_textRendererCache;
 
     // Mesh for circle with width
     GL::Mesh m_circleLineMesh;
@@ -170,6 +224,7 @@ MyApplication::MyApplication(const Arguments& arguments)
     g_application = this;
 
     setupCamera();
+    setupText();
 
     m_startApplication = m_startFrame = std::chrono::high_resolution_clock::now();
 
@@ -189,6 +244,39 @@ MyApplication::MyApplication(const Arguments& arguments)
     setup();
 
     imguiInit();
+}
+
+// sometimes for some reason the resource cpp is not compiled
+int resourceInitializer_Magnum2D_RESOURCES();
+
+void MyApplication::setupText()
+{
+    // for some reason this one may not be called
+    resourceInitializer_Magnum2D_RESOURCES();
+
+    m_importerManager.loadAndInstantiate("TgaImporter");
+    m_fontManager.registerExternalManager(m_importerManager);
+
+    /* Load MagnumFont plugin */
+    m_font = m_fontManager.loadAndInstantiate("MagnumFont");
+    if (!m_font)
+        std::exit(1);
+
+    m_font->setFileCallback([](const std::string& filename, InputFileCallbackPolicy, void*)
+    {
+        Utility::Resource rs("fonts");
+        return Containers::optional(rs.getRaw(filename));
+    });
+
+    /* Open the font and fill glyph cache */
+    if (!m_font->openFile("SourceSansPro.conf", 0.0f))
+    {
+        Error() << "Cannot open font file";
+        std::exit(1);
+    }
+    /* We know it's Text::GlyphCache, so cast it. Sigh, this is awful. */
+    m_fontGlyphCache = Containers::pointerCast<Text::GlyphCache>(m_font->createGlyphCache());
+    CORRADE_INTERNAL_ASSERT(m_fontGlyphCache);
 }
 
 void MyApplication::drawEvent()
@@ -219,14 +307,8 @@ void MyApplication::drawEvent()
     m_circleOutline.Draw(m_shader, m_cameraProjection);
 
     // line cache - clear meshes which were not drawn
-    for (auto it = std::begin(m_lineMeshCache); it != std::end(m_lineMeshCache);)
-    {
-        if (!m_lineMeshCacheDrawn.contains(it->first))
-            it = m_lineMeshCache.erase(it);
-        else
-            it++;
-    }
-    m_lineMeshCacheDrawn.clear();
+    m_lineMeshCache.Update();
+    m_textRendererCache.Update();
 
     swapBuffers();
     redraw();
@@ -391,6 +473,94 @@ Math::Matrix3<float> CreateTransformation(Vector2 translation, float radians, Ve
     return Math::Matrix3<float>::from(rotation.toMatrix(), translation) * Math::Matrix3<float>::scaling(scale);
 }
 
+Text::Renderer2D* TextRendererCache::Get(float height, UnsignedByte alignment)
+{
+    if (cache.contains({ height, alignment }))
+    {
+        cacheDrawn.insert({ height, alignment });
+        return cache[{ height, alignment }].get();
+    }
+    return nullptr;
+}
+
+Text::Renderer2D* TextRendererCache::Add(float height, UnsignedByte alignment)
+{
+    cache[{ height, alignment }] = std::make_unique<Magnum::Text::Renderer2D>(*g_application->m_font, *g_application->m_fontGlyphCache, height, (Text::Alignment)alignment);
+    cache[{ height, alignment }]->reserve(50, GL::BufferUsage::DynamicDraw, GL::BufferUsage::StaticDraw);
+    cacheDrawn.insert({ height, alignment });
+
+    return cache[{ height, alignment }].get();
+}
+
+void TextRendererCache::Update()
+{
+    for (auto it = std::begin(cache); it != std::end(cache);)
+    {
+        if (!cacheDrawn.contains(it->first))
+            it = cache.erase(it);
+        else
+            it++;
+    }
+    cacheDrawn.clear();
+}
+
+GL::Mesh* LineMeshCache::Get(size_t hash)
+{
+    if (cache.contains(hash))
+    {
+        cacheDrawn.insert(hash);
+        return &cache[hash];
+    }
+    return nullptr;
+}
+
+Trade::MeshData lineMesh(std::span<Magnum2D::vec2> points, MeshPrimitive primitive)
+{
+    Containers::Array<char> vertexData{sizeof(Vector2)* points.size()};
+    auto positions = Containers::arrayCast<Vector2>(vertexData);
+
+    for (size_t i = 0; i < points.size(); i++)
+        positions[i] = points[i];
+
+    Trade::MeshAttributeData attr{ Trade::MeshAttribute::Position, VertexFormat::Vector2, 0, (uint32_t)points.size(), sizeof(Vector2) };
+
+    return Trade::MeshData{primitive, std::move(vertexData), { attr }};
+}
+
+Trade::MeshData lineMeshStrip2D(std::span<Magnum2D::vec2> points)
+{
+    return lineMesh(points, Magnum::MeshPrimitive::LineStrip);
+}
+
+Trade::MeshData lineMeshLines(std::span<Magnum2D::vec2> points)
+{
+    return lineMesh(points, Magnum::MeshPrimitive::Lines);
+}
+
+GL::Mesh* LineMeshCache::Add(size_t hash, std::span<Magnum2D::vec2> points)
+{
+    auto meshData = lineMeshStrip2D(points);
+    auto meshDataLines = MeshTools::generateLines(meshData);
+    auto meshNew = MeshTools::compileLines(meshDataLines);
+
+    cache[hash] = std::move(meshNew);
+    cacheDrawn.insert(hash);
+
+    return &cache[hash];
+}
+
+void LineMeshCache::Update()
+{
+    for (auto it = std::begin(cache); it != std::end(cache);)
+    {
+        if (!cacheDrawn.contains(it->first))
+            it = cache.erase(it);
+        else
+            it++;
+    }
+    cacheDrawn.clear();
+}
+
 namespace Magnum2D
 {
     col3 rgb(uint8_t r, uint8_t g, uint8_t b)
@@ -544,29 +714,6 @@ namespace Magnum2D
         g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
     }
 
-    Trade::MeshData lineMesh(std::span<vec2> points, MeshPrimitive primitive)
-    {
-        Containers::Array<char> vertexData{sizeof(Vector2)* points.size()};
-        auto positions = Containers::arrayCast<Vector2>(vertexData);
-
-        for (size_t i = 0; i < points.size(); i++)
-            positions[i] = points[i];
-
-        Trade::MeshAttributeData attr{ Trade::MeshAttribute::Position, VertexFormat::Vector2, 0, (uint32_t)points.size(), sizeof(Vector2) };
-
-        return Trade::MeshData{primitive, std::move(vertexData), { attr }};
-    }
-
-    Trade::MeshData lineMeshStrip2D(std::span<vec2> points)
-    {
-        return lineMesh(points, Magnum::MeshPrimitive::LineStrip);
-    }
-
-    Trade::MeshData lineMeshLines(std::span<vec2> points)
-    {
-        return lineMesh(points, Magnum::MeshPrimitive::Lines);
-    }
-
     void drawPolyline2(std::span<vec2> points, float width, col3 color)
     {
         if (points.size() <= 1)
@@ -575,26 +722,20 @@ namespace Magnum2D
         auto hasher = std::hash<bytes>{};
         size_t hash = hasher(std::as_bytes(std::span(points)));
 
-        if (!g_application->m_lineMeshCache.contains(hash))
-        {
-            auto meshData = lineMeshStrip2D(points);
-            auto meshDataLines = MeshTools::generateLines(meshData);
-            auto meshNew = MeshTools::compileLines(meshDataLines);
+        GL::Mesh* mesh = g_application->m_lineMeshCache.Get(hash);
 
-            g_application->m_lineMeshCache[hash] = std::move(meshNew);
-        }
+        if (!mesh)
+            mesh = g_application->m_lineMeshCache.Add(hash, points);
 
         float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
         width *= factor;
-
-        g_application->m_lineMeshCacheDrawn.insert(hash);
 
         g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
                                    .setTransformationProjectionMatrix(g_application->m_cameraProjection)
                                    .setColor(color)
                                    .setWidth(width)
                                    .setSmoothness(width / 2.0f)
-                                   .draw(g_application->m_lineMeshCache[hash]);
+                                   .draw(*mesh);
     }
 
     void drawLines(const std::vector<vec2>& points, col3 color)
@@ -614,26 +755,20 @@ namespace Magnum2D
         auto hasher = std::hash<bytes>{};
         size_t hash = hasher(std::as_bytes(std::span(points)));
 
-        if (!g_application->m_lineMeshCache.contains(hash))
-        {
-            auto meshData = lineMeshLines(points);
-            auto meshDataLines = MeshTools::generateLines(meshData);
-            auto meshNew = MeshTools::compileLines(meshDataLines);
+        GL::Mesh* mesh = g_application->m_lineMeshCache.Get(hash);
 
-            g_application->m_lineMeshCache[hash] = std::move(meshNew);
-        }
+        if (!mesh)
+            mesh = g_application->m_lineMeshCache.Add(hash, points);
 
         float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
         width *= factor;
-
-        g_application->m_lineMeshCacheDrawn.insert(hash);
 
         g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
                                    .setTransformationProjectionMatrix(g_application->m_cameraProjection)
                                    .setColor(color)
                                    .setWidth(width)
                                    .setSmoothness(width / 2.0f)
-                                   .draw(g_application->m_lineMeshCache[hash]);
+                                   .draw(*mesh);
     }
 
     bool isMousePressed(Mouse mouse)
@@ -686,6 +821,52 @@ namespace Magnum2D
     bool isWindowResized()
     {
         return g_application->m_windowResized;
+    }
+
+    UnsignedByte GetAlignment(TextAlign align)
+    {
+        switch (align)
+        {
+        case TextAlign::TopLeft: return (UnsignedByte)Text::Alignment::TopLeft;
+        case TextAlign::TopMiddle: return (UnsignedByte)Text::Alignment::TopCenter;
+        case TextAlign::TopRight: return (UnsignedByte)Text::Alignment::TopRight;
+        case TextAlign::MiddleLeft: return (UnsignedByte)Text::Alignment::MiddleLeft;
+        case TextAlign::MiddleMiddle: return (UnsignedByte)Text::Alignment::MiddleCenter;
+        case TextAlign::MiddleRight: return (UnsignedByte)Text::Alignment::MiddleRight;
+        case TextAlign::BottomLeft: return (UnsignedByte)Text::Alignment::LineLeft;
+        case TextAlign::BottomMiddle: return (UnsignedByte)Text::Alignment::LineCenter;
+        case TextAlign::BottomRight: return (UnsignedByte)Text::Alignment::LineRight;
+        }
+        return (UnsignedByte)-1;
+    }
+
+    void drawText(vec2 position, const std::string& text, float height, col3 color, TextAlign align)
+    {
+        Magnum::Text::Renderer2D* renderer = g_application->m_textRendererCache.Get(height, GetAlignment(align));
+        if (!renderer)
+            renderer = g_application->m_textRendererCache.Add(height, GetAlignment(align));
+
+        renderer->render(text);
+
+        g_application->m_textShader.bindVectorTexture(g_application->m_fontGlyphCache->texture())
+                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection * CreateTransformation(position, 0.0f, { 1.0f, 1.0f }))
+                                   .setColor(color)
+                                   .setOutlineRange(0.5f, 1.0f)
+                                   .setSmoothness(0.075f)
+                                   .draw(renderer->mesh());
+    }
+
+    rectangle getTextRectangle(vec2 position, const std::string& text, float height, TextAlign align)
+    {
+        Magnum::Text::Renderer2D* renderer = g_application->m_textRendererCache.Get(height, GetAlignment(align));
+        if (!renderer)
+            renderer = g_application->m_textRendererCache.Add(height, GetAlignment(align));
+
+        renderer->render(text);
+
+        auto result = renderer->rectangle();
+
+        return result.translated(position);
     }
 }
 

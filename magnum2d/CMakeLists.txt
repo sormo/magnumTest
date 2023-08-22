@@ -16,18 +16,23 @@ else()
 endif()
 
 find_package(MagnumIntegration REQUIRED ImGui)
+find_package(Magnum REQUIRED Text MagnumFont)
 
 set(CMAKE_CXX_STANDARD 20)
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
-add_library(Magnum2D STATIC Magnum2D.h Magnum2D.cpp)
+corrade_add_resource(Magnum2D_RESOURCES assets/resources.conf)
+
+add_library(Magnum2D STATIC Magnum2D.h Magnum2D.cpp ${Magnum2D_RESOURCES})
 target_link_libraries(Magnum2D PRIVATE
     Magnum::Application
     Magnum::GL
     Magnum::Magnum
     Magnum::Primitives
     Magnum::Shaders
+    Magnum::Text
+    Magnum::MagnumFont
     MagnumIntegration::ImGui)
 
 if(CORRADE_TARGET_EMSCRIPTEN)
