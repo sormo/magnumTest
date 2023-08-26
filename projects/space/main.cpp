@@ -11,13 +11,13 @@ Camera camera;
 
 double SimulationDt = 0.01f;
 
-enum TestType : int32_t
+enum class TestType : int32_t
 {
-	MassPoints,
-	Bodies
+	TestMassPoints,
+	TestBodies
 
 };
-TestType CurrentTest = TestType::Bodies;
+TestType CurrentTest = TestType::TestBodies;
 
 void setup()
 {
@@ -105,10 +105,10 @@ void gui()
 
 		switch (CurrentTest)
 		{
-		case TestType::MassPoints:
+		case TestType::TestMassPoints:
 			TestMassPoint::Gui();
 			break;
-		case TestType::Bodies:
+		case TestType::TestBodies:
 			TestBodies::Gui();
 			break;
 		}
@@ -120,6 +120,16 @@ void gui()
 
 void draw()
 {
+	//setTransform({ {4.0f, 5.0}, 0.0f });
+	//drawCircle({ 0.0f, 1.0f }, 0.5f, rgb(10, 10, 200));
+	//drawCircleOutline2({ 0.0f, 1.0f }, 0.5f, 0.3f, rgb(10, 10, 200));
+	//drawRectangle({ 0.0f, 1.0f }, 1.0f, 2.0f, rgb(10, 10, 200));
+	//drawPolygon({ {0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} }, rgb(10, 10, 200));
+	//std::vector<vec2> points = { {0.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 2.0f} };
+	//drawPolyline(points, rgb(10, 10, 200));
+	//drawPolyline2(points, 0.3f, rgb(10, 10, 200));
+	//setTransform({});
+
 	camera.Draw();
 	gui();
 
@@ -127,10 +137,10 @@ void draw()
 
 	switch (CurrentTest)
 	{
-	case TestType::MassPoints:
+	case TestType::TestMassPoints:
 		allowCameraMove = !TestMassPoint::Update();
 		break;
-	case TestType::Bodies:
+	case TestType::TestBodies:
 		allowCameraMove = !TestBodies::Update();
 		break;
 	}

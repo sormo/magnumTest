@@ -135,14 +135,33 @@ size_t Trajectory::getPoint(double time)
 	return result;
 }
 
-void Trajectory::extend(Trajectory&& trajectory)
+void Trajectory::extend(Trajectory&& trajectory, size_t fromIndex)
 {
 	positions.reserve(positions.size() + trajectory.positions.size());
-	positions.insert(positions.end(), std::make_move_iterator(trajectory.positions.begin()), std::make_move_iterator(trajectory.positions.end()));
+	positions.insert(positions.end(), std::make_move_iterator(trajectory.positions.begin() + fromIndex), std::make_move_iterator(trajectory.positions.end()));
 
 	velocities.reserve(velocities.size() + trajectory.velocities.size());
-	velocities.insert(velocities.end(), std::make_move_iterator(trajectory.velocities.begin()), std::make_move_iterator(trajectory.velocities.end()));
+	velocities.insert(velocities.end(), std::make_move_iterator(trajectory.velocities.begin() + fromIndex), std::make_move_iterator(trajectory.velocities.end()));
 
 	times.reserve(times.size() + trajectory.times.size());
-	times.insert(times.end(), std::make_move_iterator(trajectory.times.begin()), std::make_move_iterator(trajectory.times.end()));
+	times.insert(times.end(), std::make_move_iterator(trajectory.times.begin() + fromIndex), std::make_move_iterator(trajectory.times.end()));
+}
+
+void Trajectory::extend(const Trajectory& trajectory, size_t fromIndex)
+{
+	positions.reserve(positions.size() + trajectory.positions.size());
+	positions.insert(positions.end(), (trajectory.positions.begin() + fromIndex), (trajectory.positions.end()));
+
+	velocities.reserve(velocities.size() + trajectory.velocities.size());
+	velocities.insert(velocities.end(), (trajectory.velocities.begin() + fromIndex), (trajectory.velocities.end()));
+
+	times.reserve(times.size() + trajectory.times.size());
+	times.insert(times.end(), (trajectory.times.begin() + fromIndex), (trajectory.times.end()));
+}
+
+void Trajectory::clear()
+{
+	positions.clear();
+	velocities.clear();
+	times.clear();
 }

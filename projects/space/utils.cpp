@@ -117,4 +117,14 @@ namespace Utils
 			accumulatedMouseDelta = 0.0f;
 		}
 	}
+
+	std::string GetRandomString(size_t chars)
+	{
+		std::string result(chars, '\0');
+
+		for (size_t i = 0; i < chars; i++)
+			result[i] = rand() % 25 + 97;
+
+		return result;
+	}
 }

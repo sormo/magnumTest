@@ -66,4 +66,12 @@ namespace Magnum2D
 	enum class TextAlign { TopLeft, TopMiddle, TopRight, MiddleLeft, MiddleMiddle, MiddleRight, BottomLeft, BottomMiddle, BottomRight };
 	void drawText(vec2 position, const std::string& text, float height, col3 color, TextAlign align = TextAlign::BottomLeft);
 	rectangle getTextRectangle(vec2 position, const std::string& text, float height, TextAlign align);
+
+	struct transform
+	{
+		vec2 position;
+		float rotation = 0.0f;
+	};
+	void setTransform(transform t);
+	transform getTransform();
 }

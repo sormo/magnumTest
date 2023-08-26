@@ -7,6 +7,8 @@ namespace Utils
 
 	Magnum2D::vec2 GetRandomPosition(float xmin, float xmax, float ymin, float ymax); // ranges are inclusive
 	Magnum2D::col3 GetRandomColor();
+	std::string GetRandomString(size_t chars);
+
 	Magnum2D::vec2 RotateVector(const Magnum2D::vec2& vector, float radians);
 	float DistanceSqr(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2);
 	double DistanceSqr(const Magnum2D::vec2d& p1, const Magnum2D::vec2d& p2);

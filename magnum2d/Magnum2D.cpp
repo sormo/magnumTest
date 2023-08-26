@@ -199,6 +199,9 @@ public:
 
     // Mesh for circle with width
     GL::Mesh m_circleLineMesh;
+
+    Magnum2D::transform m_globalTransform;
+    Matrix3x3 m_globalTransformMatrix{ Math::IdentityInit };
 };
 
 Platform::Application::Configuration CreateConfiguration()
@@ -468,9 +471,9 @@ void MyApplication::textInputEvent(TextInputEvent& event)
 
 Math::Matrix3<float> CreateTransformation(Vector2 translation, float radians, Vector2 scale)
 {
-    auto rotation = Math::Complex<float>::rotation(Math::Rad<float>(radians));
+    auto rotation = Math::Complex<float>::rotation(Math::Rad<float>(radians + g_application->m_globalTransform.rotation));
 
-    return Math::Matrix3<float>::from(rotation.toMatrix(), translation) * Math::Matrix3<float>::scaling(scale);
+    return Math::Matrix3<float>::from(rotation.toMatrix(), translation + g_application->m_globalTransform.position) * Math::Matrix3<float>::scaling(scale);
 }
 
 Text::Renderer2D* TextRendererCache::Get(float height, UnsignedByte alignment)
@@ -644,12 +647,12 @@ namespace Magnum2D
 
     void drawCircle(vec2 center, float radius, col3 color)
     {
-        g_application->m_circle.instanceData.push_back({ CreateTransformation(center, 0.0f, { radius, radius }), color });
+        g_application->m_circle.instanceData.push_back({ CreateTransformation(center, 0.0f, vec2{ radius, radius }), color });
     }
 
     void drawCircleOutline(vec2 center, float radius, col3 color)
     {
-        g_application->m_circleOutline.instanceData.push_back({ CreateTransformation(center, 0.0f, { radius, radius }), color });
+        g_application->m_circleOutline.instanceData.push_back({ CreateTransformation(center, 0.0f, vec2{ radius, radius }), color });
     }
 
     void drawCircleOutline2(vec2 center, float radius, float width, col3 color)
@@ -687,7 +690,7 @@ namespace Magnum2D
         mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
         mesh.setCount(points.size());
 
-        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix).draw(mesh);
     }
 
     void drawPolyline(const std::vector<vec2>& points, col3 color)
@@ -699,7 +702,7 @@ namespace Magnum2D
         mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
         mesh.setCount(points.size());
 
-        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix).draw(mesh);
     }
 
     void drawPolyline(std::span<vec2> points, col3 color)
@@ -711,7 +714,7 @@ namespace Magnum2D
         mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
         mesh.setCount(points.size());
 
-        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix).draw(mesh);
     }
 
     void drawPolyline2(std::span<vec2> points, float width, col3 color)
@@ -731,7 +734,7 @@ namespace Magnum2D
         width *= factor;
 
         g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
-                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection)
+                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix)
                                    .setColor(color)
                                    .setWidth(width)
                                    .setSmoothness(width / 2.0f)
@@ -747,7 +750,7 @@ namespace Magnum2D
         mesh.addVertexBuffer(vertices, 0, Shaders::FlatGL2D::Position{});
         mesh.setCount(points.size());
 
-        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection).draw(mesh);
+        g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix).draw(mesh);
     }
 
     void drawLines2(std::vector<vec2>& points, float width, col3 color)
@@ -764,7 +767,7 @@ namespace Magnum2D
         width *= factor;
 
         g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
-                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection)
+                                   .setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix)
                                    .setColor(color)
                                    .setWidth(width)
                                    .setSmoothness(width / 2.0f)
@@ -867,6 +870,18 @@ namespace Magnum2D
         auto result = renderer->rectangle();
 
         return result.translated(position);
+    }
+
+    void setTransform(transform t)
+    {
+        g_application->m_globalTransform = {};
+        g_application->m_globalTransformMatrix = CreateTransformation(t.position, t.rotation, {1.0f, 1.0f});
+        g_application->m_globalTransform = t;
+    }
+
+    transform getTransform()
+    {
+        return g_application->m_globalTransform;
     }
 }
 

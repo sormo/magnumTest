@@ -14,7 +14,10 @@ struct Trajectory
 	size_t getClosestPointOnTrajectoryAroundIndex(const Magnum2D::vec2& point, size_t previousIndex); // get closest point given previous index
 	size_t getPoint(double time);
 
-	void extend(Trajectory&& trajectory);
+	void extend(Trajectory&& trajectory, size_t fromIndex = 0);
+	void extend(const Trajectory& trajectory, size_t fromIndex = 0);
+
+	void clear();
 
 	std::vector<Magnum2D::vec2> positions;
 	std::vector<Magnum2D::vec2> velocities;

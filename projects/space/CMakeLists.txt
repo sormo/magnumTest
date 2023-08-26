@@ -35,7 +35,9 @@ add_executable(space main.cpp
                      celestialObject.h
                      celestialObject.cpp
                      testMassPoint.h
-                     testBodies.h)
+                     testBodies.h
+                     bodies.h
+                     bodies.cpp)
 
 target_link_libraries(space PRIVATE Magnum2D)
 

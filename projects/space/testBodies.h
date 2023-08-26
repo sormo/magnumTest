@@ -3,8 +3,10 @@
 #include "point.h"
 #include "utils.h"
 #include "simulation.h"
+#include "bodies.h"
 
 extern double SimulationDt;
+extern Camera camera;
 
 namespace TestBodies
 {
@@ -12,6 +14,8 @@ namespace TestBodies
 	float SimulatedSeconds = 0.0f;
 	float CurrentTime = 0.0f;
 	bool IsPlaying = false;
+	bool IsParentSelect = false;
+	bool IsCameraFollow = false;
 
 	enum DrawFlag { DrawFlagEuler = 0x1, DrawFlagVerlet = 0x2, DrawFlagRungeKutta = 0x4 };
 	int32_t DrawFlags = DrawFlagEuler | DrawFlagVerlet | DrawFlagRungeKutta;
@@ -28,94 +32,6 @@ namespace TestBodies
 	State CurrentState = State::View;
 
 	using namespace Magnum2D;
-
-	template <typename T>
-	struct Bodies
-	{
-		const float ForceDrawFactor = 0.2f;
-
-		size_t AddBody(vec2d position, vec2d velocity, double mass = 1.0)
-		{
-			initialPoints.emplace_back(position, velocity);
-			currentPoints.emplace_back(position, velocity);
-			trajectories.push_back({});
-
-			initialPoints.back().setMass(mass);
-			currentPoints.back().setMass(mass);
-
-			vec2 from = (vec2)position;
-			vec2 to = (vec2)(position + velocity * ForceDrawFactor);
-			VectorHandler::OnChange onFromChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
-			{
-				initialPoints[index].position = (vec2d)v;
-				//SimulateClear(SimulatedSeconds);
-				return v;
-			};
-			VectorHandler::OnChange onToChange = [this, index = initialPoints.size() - 1](const vec2& v, void*)
-			{
-				initialPoints[index].setVelocity((vec2d)(v / ForceDrawFactor) - initialPoints[index].position);
-				//SimulateClear(SimulatedSeconds);
-				return v;
-			};
-
-			vectorHandler.Push(from, to, nullptr, onFromChange, onToChange);
-
-			return initialPoints.size() - 1;
-		}
-
-		void SimulateClear(double time)
-		{
-			std::vector<std::vector<BurnPtr>> burns(initialPoints.size());
-			currentPoints = initialPoints;
-
-			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, 0.0, TrajectoryPointCount);
-			for (size_t i = 0; i < newTrajectories.size(); i++)
-			{
-				trajectories[i].positions = std::move(newTrajectories[i].positions);
-				trajectories[i].velocities = std::move(newTrajectories[i].velocities);
-				trajectories[i].times = std::move(newTrajectories[i].times);
-			}
-			currentSimulatedSeconds = time;
-		}
-
-		void SimulateExtend(double time)
-		{
-			std::vector<std::vector<BurnPtr>> burns(currentPoints.size());
-			auto newTrajectories = Simulation::Simulate(currentPoints, burns, SimulationDt, time, currentSimulatedSeconds, TrajectoryPointCount);
-			for (size_t i = 0; i < newTrajectories.size(); i++)
-				trajectories[i].extend(std::move(newTrajectories[i]));
-
-			currentSimulatedSeconds += time;
-		}
-
-		void Draw(const std::vector<col3>& cols)
-		{
-			for (size_t i = 0; i < trajectories.size(); i++)
-				trajectories[i].draw(0.0, CurrentTime, cols[i]);
-		}
-
-		void Draw(const col3& color)
-		{
-			for (size_t i = 0; i < trajectories.size(); i++)
-				trajectories[i].draw(0.0, CurrentTime, color);
-		}
-
-		vec2 GetPosition(size_t index, double time)
-		{
-			if (time == 0.0)
-				return (vec2)initialPoints[index].position;
-
-			return trajectories[index].positions[trajectories[index].getPoint(time)];
-		}
-
-		double currentSimulatedSeconds = 0.0;
-
-		std::vector<T> initialPoints;
-		std::vector<T> currentPoints;
-		std::vector<Trajectory> trajectories;
-
-		VectorHandler vectorHandler;
-	};
 
 	Bodies<PointEuler> bodiesEuler;
 	Bodies<PointVerlet> bodiesVerlet;
@@ -191,6 +107,12 @@ namespace TestBodies
 
 		if (CurrentBody)
 		{
+			ImGui::SeparatorText("Body");
+
+			ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text(bodiesRungeKutta.names[*CurrentBody].c_str());
+			ImGui::Text("Parent"); ImGui::SameLine(100); ImGui::Text(bodiesRungeKutta.parents[*CurrentBody] ? bodiesRungeKutta.names[*bodiesRungeKutta.parents[*CurrentBody]].c_str() : "none");
+			ImGui::SameLine(100); ImGui::Checkbox("Select", &IsParentSelect);
+
 			auto& trajectory = bodiesRungeKutta.trajectories[*CurrentBody];
 			size_t currentIndex = trajectory.getPoint(CurrentTime);
 			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m]", trajectory.positions[currentIndex].x(), trajectory.positions[currentIndex].y());
@@ -207,6 +129,7 @@ namespace TestBodies
 				Simulate();
 			} 
 			ImGui::SameLine(); ImGui::Text("[kg]");
+			ImGui::Checkbox("Camera Follow", &IsCameraFollow);
 		}
 	}
 
@@ -231,20 +154,20 @@ namespace TestBodies
 		SimulationDt = 60 * 60;
 		GravityThreshold = 0.001 / distanceScaler;
 
-		auto createBody = [](double positionX, double velocityY, double mass)
+		auto createBody = [](const char* name, double positionX, double velocityY, double mass)
 		{
 			auto position = vec2d(positionX, 0.0);
 			auto velocity = vec2d(0.0, velocityY);
 
-			bodiesEuler.AddBody(position, velocity, mass);
-			bodiesVerlet.AddBody(position, velocity, mass);
-			bodiesRungeKutta.AddBody(position, velocity, mass);
+			bodiesEuler.AddBody(name, position, velocity, mass);
+			bodiesVerlet.AddBody(name, position, velocity, mass);
+			bodiesRungeKutta.AddBody(name, position, velocity, mass);
 			colors.push_back(Utils::GetRandomColor());
 		};
 
-		createBody(0.0, 0.0, massSun / massScaler);
-		createBody(distanceSunEarth / distanceScaler, velocityEarth / distanceScaler, massEarth / massScaler);
-		createBody((distanceSunEarth + distanceEarthMoon) / distanceScaler, (velocityMoon + velocityEarth) / distanceScaler, massMoon / massScaler);
+		createBody("Sun", 0.0, 0.0, massSun / massScaler);
+		createBody("Earth", distanceSunEarth / distanceScaler, velocityEarth / distanceScaler, massEarth / massScaler);
+		createBody("Moon", (distanceSunEarth + distanceEarthMoon) / distanceScaler, (velocityMoon + velocityEarth) / distanceScaler, massMoon / massScaler);
 
 	}
 
@@ -257,7 +180,7 @@ namespace TestBodies
 		double second = 1e-7 / pi;
 		double minute = 60.0 * second;
 		double hour = 60.0 * minute;
-		double day = 24.0f * hour;
+		double day = 24.0 * hour;
 
 		double massSun = 1.989e30 * kilogram;
 		double massEarth = 5.972e24 * kilogram;
@@ -271,51 +194,28 @@ namespace TestBodies
 		GravitationalConstant = 4.0 * pi * pi;
 		SimulationDt = hour;
 
-		auto createBody = [](double positionX, double velocityY, double mass)
+		auto createBody = [](const char* name, double positionX, double velocityY, double mass)
 		{
 			auto position = vec2d(positionX, 0.0);
 			auto velocity = vec2d(0.0, velocityY);
 
-			bodiesEuler.AddBody(position, velocity, mass);
-			bodiesVerlet.AddBody(position, velocity, mass);
-			bodiesRungeKutta.AddBody(position, velocity, mass);
+			bodiesEuler.AddBody(name, position, velocity, mass);
+			bodiesVerlet.AddBody(name, position, velocity, mass);
+			bodiesRungeKutta.AddBody(name, position, velocity, mass);
 			colors.push_back(Utils::GetRandomColor());
 		};
 
-		createBody(0.0, 0.0, massSun);
-		createBody(distanceSunEarth, velocityEarth, massEarth);
-		createBody((distanceSunEarth + distanceEarthMoon), (velocityMoon + velocityEarth), massMoon);
+		createBody("Sun", 0.0, 0.0, massSun);
+		createBody("Earth", distanceSunEarth, velocityEarth, massEarth);
+		createBody("Moon", (distanceSunEarth + distanceEarthMoon), (velocityMoon + velocityEarth), massMoon);
 
-	}
-
-	void SetupRandomBodies()
-	{
-		auto cameraHsize = getCameraSize() / 2.0f;
-
-		for (int i = 0; i < 5; i++)
-		{
-			static const float IntVelRad = 0.5f;
-
-			auto position = (vec2d)Utils::GetRandomPosition(-cameraHsize.x(), cameraHsize.x(), -cameraHsize.y(), cameraHsize.y());
-			auto velocity = (vec2d)Utils::GetRandomPosition(-IntVelRad, IntVelRad, -IntVelRad, IntVelRad);
-
-			bodiesEuler.AddBody(position, velocity);
-			bodiesVerlet.AddBody(position, velocity);
-			bodiesRungeKutta.AddBody(position, velocity);
-			colors.push_back(Utils::GetRandomColor());
-		}
 	}
 
 	void Setup()
 	{
-		//SetupRandomBodies();
 		SetupSolarSystemWip2();
 
 		//bodiesEuler.currentPoints[1].initializeCircularOrbit({ 0.0,0.0 }, massSun / massScaler);
-
-		//Simulate();
-
-		//Simulate(SimulatedSeconds);
 	}
 
 	void UdpateCurrentTime()
@@ -362,9 +262,10 @@ namespace TestBodies
 			if (CurrentState == State::AddBody)
 			{
 				auto position = (vec2d)getMousePositionWorld();
-				bodiesEuler.AddBody(position, {});
-				bodiesVerlet.AddBody(position, {});
-				bodiesRungeKutta.AddBody(position, {});
+				auto name = Utils::GetRandomString(5);
+				bodiesEuler.AddBody(name.c_str(), position, {});
+				bodiesVerlet.AddBody(name.c_str(), position, {});
+				bodiesRungeKutta.AddBody(name.c_str(), position, {});
 				colors.push_back(Utils::GetRandomColor());
 
 				Simulate();
@@ -375,17 +276,22 @@ namespace TestBodies
 
 		if (clickHandler.IsClick())
 		{
-			CurrentBody = {};
-			auto mousePosition = getMousePositionWorld();
-			for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
+			auto previousCurrentBody = CurrentBody;
+			auto clickBody = bodiesRungeKutta.SelectBody(CurrentTime, getMousePositionWorld(), Common::GetZoomIndependentSize(0.2f));
+
+			if (CurrentBody && IsParentSelect)
 			{
-				vec2 position = (vec2)bodiesRungeKutta.GetPosition(i, CurrentTime);
-				if ((position - mousePosition).length() < Common::GetZoomIndependentSize(0.2f))
-				{
-					CurrentBody = i;
-					break;
-				}
+				if (clickBody)
+					bodiesRungeKutta.SetParent(*clickBody, *CurrentBody);
+				else
+					bodiesRungeKutta.ClearParent(*CurrentBody);
 			}
+			else
+			{
+				CurrentBody = clickBody;
+			}
+			IsParentSelect = false;
+			IsCameraFollow = false;
 		}
 
 		clickHandler.Update();
@@ -398,6 +304,11 @@ namespace TestBodies
 		{
 			SynchronizeWithRungeKutta();
 			Simulate();
+		}
+
+		if (IsCameraFollow)
+		{
+			setCameraCenter(bodiesRungeKutta.GetPosition(*CurrentBody, CurrentTime));
 		}
 
 		return result;
