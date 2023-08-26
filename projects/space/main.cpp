@@ -71,20 +71,20 @@ void gui()
 		bool resimulate = false;
 		bool refreshEffectiveRadius = false;
 
-		static float GravitationalConstantF = GravitationalConstant, GravityThresholdF = GravityThreshold, SimulationDtF = SimulationDt, SimulationSecondsF = TestMassPoint::SimulationSeconds;
-		auto SliderDouble = [&](const char* name, double& target, float &tmp, double min, double max)
+		float GravitationalConstantF = GravitationalConstant, GravityThresholdF = GravityThreshold, SimulationDtF = SimulationDt / Unit::Hour, SimulationSecondsF = TestMassPoint::SimulationSeconds;
+		auto SliderDouble = [&](const char* name, double& target, float &tmp, double min, double max, double factor)
 		{
 			if (ImGui::SliderFloat(name, &tmp, (float)min, (float)max))
 			{
-				target = tmp;
+				target = tmp * factor;
 				return true;
 			}
 			return false;
 		};
 
-		resimulate |= refreshEffectiveRadius |= SliderDouble("Gravity Constant", GravitationalConstant, GravitationalConstantF, 0.01, 1.0); ImGui::SameLine(); ImGui::Text("[m^3/(kg * s^2)]");
-		resimulate |= refreshEffectiveRadius |= SliderDouble("Gravity Threshold", GravityThreshold, GravityThresholdF, 0.0005, 0.01); ImGui::SameLine(); ImGui::Text("[m/s^2]");
-		resimulate |= SliderDouble("Simulation Dt", SimulationDt, SimulationDtF, 0.001, 0.1); ImGui::SameLine(); ImGui::Text("[s]");
+		resimulate |= refreshEffectiveRadius |= SliderDouble("Gravity Constant", GravitationalConstant, GravitationalConstantF, 0.1, 100.0, 1.0); ImGui::SameLine(); ImGui::Text("[]");
+		//resimulate |= refreshEffectiveRadius |= SliderDouble("Gravity Threshold", GravityThreshold, GravityThresholdF, 0.0005, 0.01, 1.0); ImGui::SameLine(); ImGui::Text("[m/s^2]");
+		resimulate |= SliderDouble("Simulation Dt", SimulationDt, SimulationDtF, 0.1, 24.0, Unit::Hour); ImGui::SameLine(); ImGui::Text("[hours]");
 
 		if (refreshEffectiveRadius)
 		{
@@ -94,7 +94,7 @@ void gui()
 
 		if (resimulate)
 		{
-			TestMassPoint::Simulate();
+			//TestMassPoint::Simulate();
 			TestBodies::Simulate();
 		}
 	}

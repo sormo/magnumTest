@@ -1,9 +1,35 @@
 #pragma once
 #include <Magnum2D.h>
 
+namespace Unit
+{
+	// time
+	extern double Second;
+	extern double Minute;
+	extern double Hour;
+	extern double Day;
+	extern double Month;
+	extern double Year;
+
+	// mass
+	extern double Kilogram;
+	extern double Ton;
+	extern double Megaton;
+
+	// length
+	extern double Meter;
+	extern double Kilometer;
+	extern double AU;
+
+	void SetBaseSecond(double base);
+	void SetBaseKilogram(double base);
+	void SetBaseMeter(double base);
+}
+
 namespace Utils
 {
 	const float Deg2Rad = 0.0174533f;
+	const double Pi = 3.1415926535897931;
 
 	Magnum2D::vec2 GetRandomPosition(float xmin, float xmax, float ymin, float ymax); // ranges are inclusive
 	Magnum2D::col3 GetRandomColor();

@@ -11,7 +11,7 @@ extern Camera camera;
 namespace TestBodies
 {
 	int32_t TrajectoryPointCount = 300;
-	float SimulatedSeconds = 0.0f;
+	float SimulatedTime = 0.0f;
 	float CurrentTime = 0.0f;
 	bool IsPlaying = false;
 	bool IsParentSelect = false;
@@ -68,9 +68,9 @@ namespace TestBodies
 
 	void Simulate()
 	{
-		bodiesEuler.SimulateClear(SimulatedSeconds);
-		bodiesVerlet.SimulateClear(SimulatedSeconds);
-		bodiesRungeKutta.SimulateClear(SimulatedSeconds);
+		bodiesEuler.SimulateClear(SimulatedTime);
+		bodiesVerlet.SimulateClear(SimulatedTime);
+		bodiesRungeKutta.SimulateClear(SimulatedTime);
 	}
 
 	void Simulate(double seconds)
@@ -78,29 +78,31 @@ namespace TestBodies
 		bodiesEuler.SimulateExtend(seconds);
 		bodiesVerlet.SimulateExtend(seconds);
 		bodiesRungeKutta.SimulateExtend(seconds);
-		SimulatedSeconds += seconds;
+		SimulatedTime += seconds;
 	}
 
 	void Gui()
 	{
-		ImGui::Text("Simulated Seconds: %.1f [s]", TestBodies::SimulatedSeconds);
-		ImGui::SameLine();
-		ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
-
 		if (ImGui::SliderInt("Trajectory Point Count", &TrajectoryPointCount, 100, 1000))
 			Simulate();
 
-		static float simulateTime = 1.0f;
-		ImGui::InputFloat("Time: ", &simulateTime, 0.5f, 15.0f);
+		ImGui::Text("Simulated days: %.3f [days]", TestBodies::SimulatedTime / Unit::Day);
+		ImGui::SameLine();
+		ImGui::Checkbox("Playing", &TestBodies::IsPlaying);
+
+		static float simulateDays = 365.0f;
+		ImGui::InputFloat("Days: ", &simulateDays, 0.5f, 15.0f);
 		ImGui::SameLine();
 		if (ImGui::Button("Simulate"))
-			Simulate((double)simulateTime);
+			Simulate((double)simulateDays * Unit::Day);
 
 		ImGui::CheckboxFlags("Euler", &DrawFlags, DrawFlagEuler); ImGui::SameLine();
 		ImGui::CheckboxFlags("Verlet", &DrawFlags, DrawFlagVerlet); ImGui::SameLine();
 		ImGui::CheckboxFlags("RungeKutta", &DrawFlags, DrawFlagRungeKutta);
 
-		ImGui::SliderFloat("Current Time", &TestBodies::CurrentTime, 0.0f, TestBodies::SimulatedSeconds); ImGui::SameLine(); ImGui::Text("[s]");
+		float currentDay = CurrentTime / Unit::Day;
+		ImGui::SliderFloat("Current Time", &currentDay, 0.0f, TestBodies::SimulatedTime / Unit::Day); ImGui::SameLine(); ImGui::Text("[days]");
+		TestBodies::CurrentTime = currentDay * Unit::Day;
 
 		ImGui::RadioButton("View", (int32_t*)&CurrentState, 0); ImGui::SameLine();
 		ImGui::RadioButton("Add", (int32_t*)&CurrentState, 1);
@@ -111,7 +113,7 @@ namespace TestBodies
 
 			ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text(bodiesRungeKutta.names[*CurrentBody].c_str());
 			ImGui::Text("Parent"); ImGui::SameLine(100); ImGui::Text(bodiesRungeKutta.parents[*CurrentBody] ? bodiesRungeKutta.names[*bodiesRungeKutta.parents[*CurrentBody]].c_str() : "none");
-			ImGui::SameLine(100); ImGui::Checkbox("Select", &IsParentSelect);
+			ImGui::SameLine(); ImGui::Checkbox("Select", &IsParentSelect);
 
 			auto& trajectory = bodiesRungeKutta.trajectories[*CurrentBody];
 			size_t currentIndex = trajectory.getPoint(CurrentTime);
@@ -120,79 +122,35 @@ namespace TestBodies
 
 			auto& bodyCurrent = bodiesRungeKutta.currentPoints[*CurrentBody];
 			auto& bodyInit = bodiesRungeKutta.initialPoints[*CurrentBody];
-			float mass = (float)bodyInit.getMass();
-			if (ImGui::SliderFloat("Mass", &mass, 0.1f, 10.0f))
+			float mass = (float)( (bodyInit.getMass() / (Unit::Kilogram * 1e24)));
+			if (ImGui::InputFloat("Mass: ", &mass, 0.5f, 15.0f))
 			{
 				bodyInit.setMass(mass);
 				bodyCurrent.setMass(mass);
 				SynchronizeWithRungeKutta();
 				Simulate();
 			} 
-			ImGui::SameLine(); ImGui::Text("[kg]");
+			ImGui::SameLine(); ImGui::Text("[10^24 kg]");
 			ImGui::Checkbox("Camera Follow", &IsCameraFollow);
 		}
 	}
 
 	void SetupSolarSystemWip()
 	{
-		double massSun = 1.989e30;
-		double massEarth = 5.972e24;
-		double massMoon = 7.348e22;
-		double gravitationalConstant = 6.6743e-11;
-		double distanceSunEarth = 1.518e11;
-		double distanceEarthMoon = 3.844e8;
-		double velocityEarth = 2.9722e4;
-		double velocityMoon = 1.020e3;
+		Unit::SetBaseMeter((1.0 / 1.5e8) * 1e-3);
+		Unit::SetBaseKilogram(1.0 / 2e30);
+		Unit::SetBaseSecond(1e-7 / Utils::Pi);
 
-		double massScaler = 1.0e24;
-		double distanceScaler = 1.0e10;
+		double massSun = 1.989e30 * Unit::Kilogram;
+		double massEarth = 5.972e24 * Unit::Kilogram;
+		double massMoon = 7.348e22 * Unit::Kilogram;
+		double distanceSunEarth = 1.518e11 * Unit::Meter;
+		double distanceEarthMoon = 3.844e8 * Unit::Meter;
+		double velocityEarth = 2.9722e4 * Unit::Meter / Unit::Second;
+		double velocityMoon = 1.020e3 * Unit::Meter / Unit::Second;
 
-		//double massScaler = 1.0;
-		//double distanceScaler = 1.0;
-
-		GravitationalConstant = gravitationalConstant * massScaler / (distanceScaler * distanceScaler * distanceScaler);
-		SimulationDt = 60 * 60;
-		GravityThreshold = 0.001 / distanceScaler;
-
-		auto createBody = [](const char* name, double positionX, double velocityY, double mass)
-		{
-			auto position = vec2d(positionX, 0.0);
-			auto velocity = vec2d(0.0, velocityY);
-
-			bodiesEuler.AddBody(name, position, velocity, mass);
-			bodiesVerlet.AddBody(name, position, velocity, mass);
-			bodiesRungeKutta.AddBody(name, position, velocity, mass);
-			colors.push_back(Utils::GetRandomColor());
-		};
-
-		createBody("Sun", 0.0, 0.0, massSun / massScaler);
-		createBody("Earth", distanceSunEarth / distanceScaler, velocityEarth / distanceScaler, massEarth / massScaler);
-		createBody("Moon", (distanceSunEarth + distanceEarthMoon) / distanceScaler, (velocityMoon + velocityEarth) / distanceScaler, massMoon / massScaler);
-
-	}
-
-	void SetupSolarSystemWip2()
-	{
-		double pi = 3.141592654;
-		double kilometer = 1.0 / (1.5e8);
-		double meter = kilometer / (1e3);
-		double kilogram = 1.0 / (2e30);
-		double second = 1e-7 / pi;
-		double minute = 60.0 * second;
-		double hour = 60.0 * minute;
-		double day = 24.0 * hour;
-
-		double massSun = 1.989e30 * kilogram;
-		double massEarth = 5.972e24 * kilogram;
-		double massMoon = 7.348e22 * kilogram;
-		//double gravitationalConstant = 6.6743e-11;
-		double distanceSunEarth = 1.518e11 * meter;
-		double distanceEarthMoon = 3.844e8 * meter;
-		double velocityEarth = 2.9722e4 * meter / second;
-		double velocityMoon = 1.020e3 * meter / second;
-
-		GravitationalConstant = 4.0 * pi * pi;
-		SimulationDt = hour;
+		GravitationalConstant = 4.0 * Utils::Pi * Utils::Pi;
+		SimulationDt = Unit::Hour;
 
 		auto createBody = [](const char* name, double positionX, double velocityY, double mass)
 		{
@@ -213,17 +171,17 @@ namespace TestBodies
 
 	void Setup()
 	{
-		SetupSolarSystemWip2();
+		SetupSolarSystemWip();
 
 		//bodiesEuler.currentPoints[1].initializeCircularOrbit({ 0.0,0.0 }, massSun / massScaler);
 	}
 
 	void UdpateCurrentTime()
 	{
-		if (IsPlaying && CurrentTime < SimulatedSeconds)
-			CurrentTime += getDeltaTimeMs() / 1000.0;
-		if (CurrentTime > SimulatedSeconds)
-			CurrentTime = SimulatedSeconds;
+		if (IsPlaying && CurrentTime < SimulatedTime)
+			CurrentTime += (Unit::Day / getDeltaTimeMs()) * 0.1;
+		if (CurrentTime > SimulatedTime)
+			CurrentTime = SimulatedTime;
 	}
 
 	void Draw()
@@ -309,6 +267,8 @@ namespace TestBodies
 		if (IsCameraFollow)
 		{
 			setCameraCenter(bodiesRungeKutta.GetPosition(*CurrentBody, CurrentTime));
+
+			result = true;
 		}
 
 		return result;

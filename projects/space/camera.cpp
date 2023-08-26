@@ -68,7 +68,9 @@ void Camera::Update(bool allowMove)
 
 	setCameraSize(newCameraSize);
 
-	auto offset = mousePosition - getMousePositionWorld();
-
-	setCameraCenter(getCameraCenter() + offset);
+	if (allowMove)
+	{
+		auto offset = mousePosition - getMousePositionWorld();
+		setCameraCenter(getCameraCenter() + offset);
+	}
 }

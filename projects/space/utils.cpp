@@ -128,3 +128,47 @@ namespace Utils
 		return result;
 	}
 }
+
+namespace Unit
+{
+	double Second = 1.0;
+	double Minute = 60.0 * Second;
+	double Hour = 60.0 * Minute;
+	double Day = 24.0 * Hour;
+	double Month = 31.0 * Day;
+	double Year = 365 * Day;
+
+	// mass
+	double Kilogram = 1.0;
+	double Ton = 10e3 * Kilogram;
+	double Megaton = 10e6 * Ton;
+
+	// length
+	double Meter = 1.0;
+	double Kilometer = 10e3 * Meter;
+	double AU = 149597870700 * Meter;
+
+	void SetBaseSecond(double base)
+	{
+		Second = base;
+		Minute = 60.0 * Second;
+		Hour = 60.0 * Minute;
+		Day = 24.0 * Hour;
+		Month = 31.0 * Day;
+		Year = 365 * Day;
+	}
+
+	void SetBaseKilogram(double base)
+	{
+		Kilogram = base;
+		Ton = 10e3 * Kilogram;
+		Megaton = 10e6 * Ton;
+	}
+
+	void SetBaseMeter(double base)
+	{
+		Meter = base;
+		Kilometer = 10e3 * Meter;
+		AU = 149597870700 * Meter;
+	}
+}

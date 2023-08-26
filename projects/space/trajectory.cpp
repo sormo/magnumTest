@@ -125,6 +125,9 @@ void Trajectory::draw(col3 color)
 
 size_t Trajectory::getPoint(double time)
 {
+	if (time >= times.back())
+		return times.size() - 1;
+
 	size_t result = 0;
 
 	while (times[result] < time && result != times.size())
