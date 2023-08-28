@@ -5,9 +5,10 @@ using namespace Magnum2D;
 double GravitationalConstant = 0.8;
 double GravityThreshold = 0.001;
 
-Point::Point(const Magnum2D::vec2d& pos)
+Point::Point(const Magnum2D::vec2d& pos, double m)
 {
 	position = pos;
+	mass = m;
 }
 
 void Point::applyForce(const vec2d& force)
@@ -60,8 +61,8 @@ Magnum2D::vec2d PointEuler::getVelocity()
 	return velocity;
 }
 
-PointEuler::PointEuler(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
-	: Point(pos)
+PointEuler::PointEuler(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel, double mass)
+	: Point(pos, mass)
 {
 	setVelocity(vel);
 }
@@ -71,8 +72,8 @@ void PointEuler::reset()
 	position = acceleration = velocity = { 0.0, 0.0 };
 }
 
-PointVerlet::PointVerlet(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
-	: Point(pos)
+PointVerlet::PointVerlet(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel, double mass)
+	: Point(pos, mass)
 {
 	setVelocity(vel);
 }
@@ -107,8 +108,8 @@ void PointVerlet::reset()
 	position = acceleration = positionOld = { 0.0, 0.0 };
 }
 
-PointRungeKutta::PointRungeKutta(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel)
-	: Point(pos)
+PointRungeKutta::PointRungeKutta(const Magnum2D::vec2d& pos, const Magnum2D::vec2d& vel, double mass)
+	: Point(pos, mass)
 {
 	setVelocity(vel);
 }

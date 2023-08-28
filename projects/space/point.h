@@ -38,7 +38,7 @@ using BurnPtr = std::unique_ptr<Burn>;
 
 struct Point : public MassPoint
 {
-	Point(const Magnum2D::vec2d& pos = { 0.0, 0.0 });
+	Point(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, double mass = 0.0);
 
 	Magnum2D::vec2d acceleration;
 
@@ -86,7 +86,7 @@ struct Point : public MassPoint
 
 struct PointEuler : public Point
 {
-	PointEuler(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
+	PointEuler(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 }, double mass = 0.0);
 
 	Magnum2D::vec2d velocity;
 
@@ -99,7 +99,7 @@ struct PointEuler : public Point
 
 struct PointVerlet : public Point
 {
-	PointVerlet(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
+	PointVerlet(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 }, double mass = 0.0);
 
 	Magnum2D::vec2d positionOld;
 	double lastDt = SimulationDt;
@@ -113,7 +113,7 @@ struct PointVerlet : public Point
 
 struct PointRungeKutta : public Point
 {
-	PointRungeKutta(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 });
+	PointRungeKutta(const Magnum2D::vec2d& pos = { 0.0, 0.0 }, const Magnum2D::vec2d& vel = { 0.0, 0.0 }, double mass = 0.0);
 
 	Magnum2D::vec2d velocity;
 

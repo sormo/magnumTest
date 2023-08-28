@@ -33,52 +33,25 @@ namespace TestBodies
 
 	using namespace Magnum2D;
 
-	Bodies<PointEuler> bodiesEuler;
-	Bodies<PointVerlet> bodiesVerlet;
-	Bodies<PointRungeKutta> bodiesRungeKutta;
+	Bodies bodies;
 
 	std::vector<col3> colors;
 
-	void SynchronizeWithRungeKutta()
-	{
-		// something has changed, copy runge-kutta to others
-		for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
-		{
-			bodiesEuler.initialPoints[i].position = bodiesRungeKutta.initialPoints[i].position;
-			bodiesEuler.initialPoints[i].setVelocity(bodiesRungeKutta.initialPoints[i].velocity);
-			bodiesEuler.initialPoints[i].setMass(bodiesRungeKutta.initialPoints[i].getMass());
-			bodiesVerlet.initialPoints[i].position = bodiesRungeKutta.initialPoints[i].position;
-			bodiesVerlet.initialPoints[i].setVelocity(bodiesRungeKutta.initialPoints[i].velocity);
-			bodiesVerlet.initialPoints[i].setMass(bodiesRungeKutta.initialPoints[i].getMass());
-		}
-	}
-
 	void RefreshEffectiveRadius()
 	{
-		for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
-		{
-			bodiesEuler.initialPoints[i].recomputeEffectiveRadius();
-			bodiesEuler.currentPoints[i].recomputeEffectiveRadius();
-			bodiesVerlet.initialPoints[i].recomputeEffectiveRadius();
-			bodiesVerlet.currentPoints[i].recomputeEffectiveRadius();
-			bodiesRungeKutta.initialPoints[i].recomputeEffectiveRadius();
-			bodiesRungeKutta.currentPoints[i].recomputeEffectiveRadius();
-		}
+		for (auto& body : bodies.bodies)
+			body.RecomputeEffectiveRadius();
 	}
 
 	void Simulate()
 	{
-		bodiesEuler.SimulateClear(SimulatedTime);
-		bodiesVerlet.SimulateClear(SimulatedTime);
-		bodiesRungeKutta.SimulateClear(SimulatedTime);
+		bodies.SimulateClear(SimulatedTime);
 	}
 
-	void Simulate(double seconds)
+	void Simulate(double time)
 	{
-		bodiesEuler.SimulateExtend(seconds);
-		bodiesVerlet.SimulateExtend(seconds);
-		bodiesRungeKutta.SimulateExtend(seconds);
-		SimulatedTime += seconds;
+		bodies.SimulateExtend(time);
+		SimulatedTime += time;
 	}
 
 	void Gui()
@@ -109,25 +82,24 @@ namespace TestBodies
 
 		if (CurrentBody)
 		{
+			Bodies::Body& body = bodies.bodies[*CurrentBody];
+			
 			ImGui::SeparatorText("Body");
 
-			ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text(bodiesRungeKutta.names[*CurrentBody].c_str());
-			ImGui::Text("Parent"); ImGui::SameLine(100); ImGui::Text(bodiesRungeKutta.parents[*CurrentBody] ? bodiesRungeKutta.names[*bodiesRungeKutta.parents[*CurrentBody]].c_str() : "none");
+			ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text(body.name.c_str());
+			ImGui::Text("Parent"); ImGui::SameLine(100); ImGui::Text(body.parent ? bodies.bodies[*body.parent].name.c_str() : "");
 			ImGui::SameLine(); ImGui::Checkbox("Select", &IsParentSelect);
 
-			auto& trajectory = bodiesRungeKutta.trajectories[*CurrentBody];
-			size_t currentIndex = trajectory.getPoint(CurrentTime);
-			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m]", trajectory.positions[currentIndex].x(), trajectory.positions[currentIndex].y());
-			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m/s]", trajectory.velocities[currentIndex].x(), trajectory.velocities[currentIndex].y());
+			auto& trajectory = body.GetSimulation<PointRungeKutta>().trajectoryGlobal;
+			const auto& position = trajectory.times.empty() ? (vec2)body.initialPosition : trajectory.positions[trajectory.getPoint(CurrentTime)];
+			const auto& velocity = trajectory.times.empty() ? (vec2)body.initialVelocity : trajectory.velocities[trajectory.getPoint(CurrentTime)];
+			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m]", position.x(), position.y());
+			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m/s]", velocity.x(), velocity.y());
 
-			auto& bodyCurrent = bodiesRungeKutta.currentPoints[*CurrentBody];
-			auto& bodyInit = bodiesRungeKutta.initialPoints[*CurrentBody];
-			float mass = (float)( (bodyInit.getMass() / (Unit::Kilogram * 1e24)));
+			float mass = (float)( (body.mass / (Unit::Kilogram * 1e24)));
 			if (ImGui::InputFloat("Mass: ", &mass, 0.5f, 15.0f))
 			{
-				bodyInit.setMass(mass);
-				bodyCurrent.setMass(mass);
-				SynchronizeWithRungeKutta();
+				body.SetInitialState(body.initialPosition, body.initialVelocity, mass);
 				Simulate();
 			} 
 			ImGui::SameLine(); ImGui::Text("[10^24 kg]");
@@ -157,9 +129,7 @@ namespace TestBodies
 			auto position = vec2d(positionX, 0.0);
 			auto velocity = vec2d(0.0, velocityY);
 
-			bodiesEuler.AddBody(name, position, velocity, mass);
-			bodiesVerlet.AddBody(name, position, velocity, mass);
-			bodiesRungeKutta.AddBody(name, position, velocity, mass);
+			bodies.AddBody(name, position, velocity, mass);
 			colors.push_back(Utils::GetRandomColor());
 		};
 
@@ -186,26 +156,18 @@ namespace TestBodies
 
 	void Draw()
 	{
-		if (DrawFlags & DrawFlagEuler)
-			bodiesEuler.Draw(rgb(50, 50, 50));
-		if (DrawFlags & DrawFlagVerlet)
-			bodiesVerlet.Draw(rgb(100, 100, 100));
-		if (DrawFlags & DrawFlagRungeKutta)
-			bodiesRungeKutta.Draw(colors);
-		bodiesRungeKutta.vectorHandler.Draw();
+		bodies.Draw(DrawFlags & DrawFlagEuler, DrawFlags & DrawFlagVerlet, DrawFlags & DrawFlagRungeKutta);
 
-		for (size_t i = 0; i < bodiesRungeKutta.initialPoints.size(); i++)
+		for (size_t i = 0; i < bodies.bodies.size(); i++)
 		{
 			col3 color = CurrentBody && *CurrentBody == i ? rgb(50, 200, 50) : rgb(50, 50, 200);
-			drawCircle((vec2)bodiesRungeKutta.GetPosition(i, CurrentTime), Common::GetZoomIndependentSize(0.1f), color);
+			drawCircle((vec2)bodies.GetPosition(i, CurrentTime), Common::GetZoomIndependentSize(0.1f), color);
 		}
 
 		if (CurrentBody)
 		{
-			float effectiveRadius = bodiesRungeKutta.initialPoints[*CurrentBody].getEffectiveRadius();
-			auto& trajectory = bodiesRungeKutta.trajectories[*CurrentBody];
-			size_t currentIndex = trajectory.getPoint(CurrentTime);
-			auto position = trajectory.positions[currentIndex];
+			float effectiveRadius = bodies.bodies[*CurrentBody].GetSimulation<PointRungeKutta>().initialPoint.getEffectiveRadius();
+			auto position = bodies.GetPosition(*CurrentBody, CurrentTime);
 
 			drawCircleOutline(position, effectiveRadius, rgb(50, 50, 50));
 		}
@@ -221,10 +183,7 @@ namespace TestBodies
 			{
 				auto position = (vec2d)getMousePositionWorld();
 				auto name = Utils::GetRandomString(5);
-				bodiesEuler.AddBody(name.c_str(), position, {});
-				bodiesVerlet.AddBody(name.c_str(), position, {});
-				bodiesRungeKutta.AddBody(name.c_str(), position, {});
-				colors.push_back(Utils::GetRandomColor());
+				bodies.AddBody(name.c_str(), position, {}, 1e24 * Unit::Kilogram);
 
 				Simulate();
 
@@ -235,14 +194,14 @@ namespace TestBodies
 		if (clickHandler.IsClick())
 		{
 			auto previousCurrentBody = CurrentBody;
-			auto clickBody = bodiesRungeKutta.SelectBody(CurrentTime, getMousePositionWorld(), Common::GetZoomIndependentSize(0.2f));
+			auto clickBody = bodies.SelectBody(CurrentTime, getMousePositionWorld(), Common::GetZoomIndependentSize(0.2f));
 
 			if (CurrentBody && IsParentSelect)
 			{
 				if (clickBody)
-					bodiesRungeKutta.SetParent(*clickBody, *CurrentBody);
+					bodies.SetParent(*clickBody, *CurrentBody);
 				else
-					bodiesRungeKutta.ClearParent(*CurrentBody);
+					bodies.ClearParent(*CurrentBody);
 			}
 			else
 			{
@@ -254,20 +213,22 @@ namespace TestBodies
 
 		clickHandler.Update();
 
-		bool result = bodiesRungeKutta.vectorHandler.Update();
+		bool result = bodies.vectorHandler.Update();
 
 		Draw();
 
+		if (IsCameraFollow)
+		{
+			setCameraCenter(bodies.GetPosition(*CurrentBody, CurrentTime));
+		}
+
 		if (result)
 		{
-			SynchronizeWithRungeKutta();
 			Simulate();
 		}
 
 		if (IsCameraFollow)
 		{
-			setCameraCenter(bodiesRungeKutta.GetPosition(*CurrentBody, CurrentTime));
-
 			result = true;
 		}
 

@@ -71,7 +71,8 @@ void gui()
 		bool resimulate = false;
 		bool refreshEffectiveRadius = false;
 
-		float GravitationalConstantF = GravitationalConstant, GravityThresholdF = GravityThreshold, SimulationDtF = SimulationDt / Unit::Hour, SimulationSecondsF = TestMassPoint::SimulationSeconds;
+		//float GravityThresholdF = GravityThreshold;
+		float GravitationalConstantF = GravitationalConstant, SimulationDtF = SimulationDt / Unit::Hour;
 		auto SliderDouble = [&](const char* name, double& target, float &tmp, double min, double max, double factor)
 		{
 			if (ImGui::SliderFloat(name, &tmp, (float)min, (float)max))
