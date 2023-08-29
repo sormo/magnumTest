@@ -13,3 +13,6 @@
 [submodule "toolchains"]
 	path = toolchains
 	url = https://github.com/mosra/toolchains
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git
