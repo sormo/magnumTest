@@ -28,6 +28,16 @@ namespace Utils
 		return { std::cos(radians) * vector.x() - std::sin(radians) * vector.y(), std::sin(radians) * vector.x() + std::cos(radians) * vector.y() };
 	}
 
+	Magnum2D::vec2d RotateVector(const Magnum2D::vec2d& vector, double radians)
+	{
+		return { std::cos(radians) * vector.x() - std::sin(radians) * vector.y(), std::sin(radians) * vector.x() + std::cos(radians) * vector.y() };
+	}
+
+	double GetAngle(const Magnum2D::vec2d& vector)
+	{
+		return atan2(vector.y(), vector.x());
+	}
+
 	void DrawVector(const vec2& position, const vec2& vector, const Magnum2D::col3& color)
 	{
 		static const float ArrowAngle = 10 * Deg2Rad;
@@ -136,6 +146,19 @@ namespace Utils
 		auto data = resource.getString(file.data());
 
 		return nlohmann::json::parse(data.data());
+	}
+
+	double GetMeanDeviation(const std::vector<double>& data)
+	{
+		double mean = 0.0;
+		mean = std::accumulate(std::begin(data), std::end(data), 0.0);
+		mean /= (double)data.size();
+
+		double accumulatedMeanDistances = 0.0;
+		for (auto e : data)
+			accumulatedMeanDistances += fabs(e - mean);
+
+		return accumulatedMeanDistances / (double)data.size();
 	}
 }
 

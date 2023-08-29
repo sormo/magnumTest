@@ -114,6 +114,8 @@ void Bodies::SimulateClear(double time)
 	::SimulateClear<PointRungeKutta>(time, bodies);
 
 	simulatedTime = time;
+
+	ComputeParents();
 }
 
 void Bodies::SimulateExtend(double time)
@@ -123,6 +125,8 @@ void Bodies::SimulateExtend(double time)
 	::Simulate<PointRungeKutta>(time, simulatedTime, bodies);
 
 	simulatedTime += time;
+
+	ComputeParents();
 }
 
 void Bodies::Draw(bool euler, bool verlet, bool rungeKutta)
@@ -199,4 +203,82 @@ void Bodies::ClearParent(size_t child)
 
 	bodies[child].parent = {};
 	bodies[parent].childs.erase(child);
+}
+
+float Bodies::GetCurrentDistanceToParent(size_t index)
+{
+	if (!bodies[index].parent)
+		return {};
+	auto& sim = bodies[index].GetSimulation<PointRungeKutta>();
+	return sim.trajectoryParent.positions[sim.currentIndex].length();
+}
+
+template<class T>
+std::vector<double> GetEccentricities(Bodies::Body& a, Bodies::Body& b)
+{
+	Trajectory& traja = a.GetSimulation<T>().trajectoryGlobal;
+	Trajectory& trajb = b.GetSimulation<T>().trajectoryGlobal;
+
+	const size_t n = traja.positions.size();
+	double ma = a.mass, mb = b.mass;
+	double rm = (ma * mb) / (ma + mb);
+
+	double G = GravitationalConstant;
+
+	std::vector<double> E(n);
+	for (size_t i = 0; i < n; ++i)
+	{
+		vec2d velocity = (vec2d)traja.velocities[i] - (vec2d)trajb.velocities[i];
+
+		double v = velocity.length();
+		double vt = Utils::RotateVector(velocity, Utils::GetAngle(velocity)).y();
+		double r = (traja.positions[i] - trajb.positions[i]).length();
+		double energy = 0.5 * rm * v * v - (G * ma * mb) / r;
+
+		double angularMomentum = rm * r * vt; // use tangential part of velocity
+		double semilatusRectum = pow(angularMomentum, 2) / (rm * G * ma * mb);
+		double eccentricity = sqrt(1 + (2.0 * energy * pow(angularMomentum, 2)) / (rm * pow(G * ma * mb, 2)));
+
+		E[i] = eccentricity;
+	}
+
+	return E;
+}
+
+void Bodies::ComputeParents()
+{
+	// constant of allowed deviation of eccentricity for elliptical orbit
+	static const double PeriodicOrbitFocusSigma = 1.0;
+
+	for (size_t child = 0; child < bodies.size(); ++child)
+	{
+		using EccentricityParentChildPair = std::pair<double, std::pair<size_t, size_t>>;
+		std::vector<EccentricityParentChildPair> values;
+
+		for (size_t parent = 0; parent < bodies.size(); ++parent)
+		{
+			if (parent == child || bodies[parent].mass < bodies[child].mass)
+				continue;
+
+			double value = Utils::GetMeanDeviation(GetEccentricities<PointRungeKutta>(bodies[child], bodies[parent]));
+			values.push_back({ value, { parent, child } });
+		}
+
+		if (!values.empty())
+		{
+			std::sort(std::begin(values), std::end(values));
+
+			auto value = values[0].first;
+			auto pair = values[0].second;
+			
+			if (values.size() > 1 && bodies[pair.first].isStar && values[1].first < PeriodicOrbitFocusSigma)
+			{
+				value = values[1].first;
+				pair = values[1].second;
+			}
+
+			if (value < PeriodicOrbitFocusSigma)
+				SetParent(pair.first, pair.second);
+		}
+	}
 }

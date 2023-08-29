@@ -25,11 +25,14 @@ struct Bodies
 
 	vec2 GetPosition(size_t index, double time);
 	vec2 GetCurrentPosition(size_t index);
+	float GetCurrentDistanceToParent(size_t index);
 
 	std::optional<size_t> SelectBody(double time, const vec2& selectPosition, float selectRadius);
 
 	void SetParent(size_t parent, size_t child);
 	void ClearParent(size_t child);
+
+	void ComputeParents();
 
 	double simulatedTime = 0.0;
 
@@ -65,6 +68,8 @@ struct Bodies
 		vec2d initialPosition;
 		vec2d initialVelocity;
 		double mass;
+
+		bool isStar = false;
 
 		col3 color;
 

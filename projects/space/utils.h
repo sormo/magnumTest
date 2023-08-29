@@ -37,6 +37,12 @@ namespace Utils
 	std::string GetRandomString(size_t chars);
 
 	Magnum2D::vec2 RotateVector(const Magnum2D::vec2& vector, float radians);
+	Magnum2D::vec2d RotateVector(const Magnum2D::vec2d& vector, double radians);
+
+	double GetAngle(const Magnum2D::vec2d& vector);
+
+	double GetMeanDeviation(const std::vector<double>& data);
+
 	float DistanceSqr(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2);
 	double DistanceSqr(const Magnum2D::vec2d& p1, const Magnum2D::vec2d& p2);
 	float LenghtSqr(const Magnum2D::vec2& p);

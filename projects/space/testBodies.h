@@ -129,6 +129,7 @@ namespace TestBodies
 			double mass = (double)body["mass"] * Unit::Kilogram;
 
 			bodies.AddBody(name, position, velocity, mass);
+			bodies.bodies.back().isStar = body.contains("star");
 		}
 	}
 
@@ -159,11 +160,15 @@ namespace TestBodies
 
 		for (size_t i = 0; i < bodies.bodies.size(); i++)
 		{
+			auto& body = bodies.bodies[i];
 			col3 color = CurrentBody && *CurrentBody == i ? rgb(50, 200, 50) : rgb(50, 50, 200);
 			drawCircle((vec2)bodies.GetCurrentPosition(i), Common::GetZoomIndependentSize(0.1f), color);
 
-			auto offset = vec2(Common::GetZoomIndependentSize(0.1f), Common::GetZoomIndependentSize(0.1f));
-			drawText((vec2)bodies.GetCurrentPosition(i) + offset, bodies.bodies[i].name, Common::GetZoomIndependentSize(0.5f), rgb(150, 150, 150));
+			if (!body.parent || bodies.GetCurrentDistanceToParent(i) > Common::GetZoomIndependentSize(0.85f))
+			{
+				auto offset = vec2(Common::GetZoomIndependentSize(0.1f), Common::GetZoomIndependentSize(0.1f));
+				drawText((vec2)bodies.GetCurrentPosition(i) + offset, body.name, Common::GetZoomIndependentSize(0.5f), rgb(150, 150, 150));
+			}
 		}
 
 		if (CurrentBody)
