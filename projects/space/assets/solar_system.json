@@ -1,186 +1,186 @@
 {
-	"sun": {
+	"Sun": {
 		"star": 1,
 		"position": { "x": 0.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 0.0 },
 		"mass": 1.989e30,
 		"radius": 6.957e8
 	},
-	"mercury": {
+	"Mercury": {
 		"position": { "x": 57900000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 47900.0 },
 		"mass": 3.302e23,
 		"radius": 2.44e6
 	},
-	"venus": {
+	"Venus": {
 		"position": { "x": 108200000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 35000.0 },
 		"mass": 4.869e24,
 		"radius": 6.052e6
 	},
-	"mars": {
+	"Mars": {
 		"position": { "x": 227900000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 24100.0 },
 		"mass": 6.419e23,
 		"radius": 3.39e6
 	},
-	"earth": {
+	"Earth": {
 		"position": { "x": 149600000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 29800.0 },
 		"mass": 5.974e24,
 		"radius": 6.371e6
 	},
-	"moon": {
+	"Moon": {
 		"position": { "x": 149984400000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 30800.0 },
 		"mass": 0.07342e24,
 		"radius": 1.737e6
 	},
-	"comet": {
+	"Comet": {
 		"position": { "x": 100000000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 20000.0 },
 		"mass": 5.0e22,
 		"radius": 6e2
 	},
-	"jupiter": {
+	"Jupiter": {
 		"position": { "x": 778500000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 13070.0 },
 		"mass": 1.898e27,
 		"radius": 6.9911e7
 	},
-	"ganymede": {
+	"Ganymede": {
 		"position": { "x": 779570400000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 23950.0 },
 		"mass": 1.4819e23,
 		"radius": 2.6341e6
 	},
-	"europa": {
+	"Europa": {
 		"position": { "x": 779170900000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 26810.0 },
 		"mass": 4.7998e22,
 		"radius": 1.5608e6
 	},
-	"io": {
+	"Io": {
 		"position": { "x": 778921700000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 30404.0 },
 		"mass": 8.9319e22,
 		"radius": 1.8213e6
 	},
-	"callisto": {
+	"Callisto": {
 		"position": { "x": 780382700000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 21274.0 },
 		"mass": 1.075938e23,
 		"radius": 2.41e6
 	},
-	"saturn": {
+	"Saturn": {
 		"position": { "x": 1429000000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 9690.0 },
 		"mass": 5.6836e26,
 		"radius": 5.8232e7
 	},
-	"enceladus": {
+	"Enceladus": {
 		"position": { "x": 1429238037000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 22325.0 },
 		"mass": 1.08e20,
 		"radius": 2.52e5
 	},
-	"dione": {
+	"Dione": {
 		"position": { "x": 1429377400000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 19720.0 },
 		"mass": 1.1e21,
 		"radius": 5.62e5
 	},
-	"rhea": {
+	"Rhea": {
 		"position": { "x": 1429527108000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 18170.0 },
 		"mass": 2.3e21,
 		"radius": 7.638e5
 	},
-	"titan": {
+	"Titan": {
 		"position": { "x": 1430221870000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 15270.0 },
 		"mass": 1.35e23,
 		"radius": 2.576e6
 	},
-	"lapetus": {
+	"Lapetus": {
 		"position": { "x": 1432560820000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 12950.0 },
 		"mass": 1.8e21,
 		"radius": 7.34e5
 	},
-	"uranus": {
+	"Uranus": {
 		"position": { "x": 2871000000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 6835.2 },
 		"mass": 8.681e25,
 		"radius": 2.5362e7
 	},
-	"miranda": {
+	"Miranda": {
 		"position": { "x": 2871129900000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 13495.2 },
 		"mass": 6.59e19,
 		"radius": 2.358e5
 	},
-	"ariel": {
+	"Ariel": {
 		"position": { "x": 2871190000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 12345.2 },
 		"mass": 1.353e21,
 		"radius": 5.789e5
 	},
-	"umbriel": {
+	"Umbriel": {
 		"position": { "x": 2871266000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 11505.2 },
 		"mass": 1.172e21,
 		"radius": 5.847e5
 	},
-	"titania": {
+	"Titania": {
 		"position": { "x": 2871436000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 10475.2 },
 		"mass": 3.527e21,
 		"radius": 7.884e5
 	},
-	"oberon": {
+	"Oberon": {
 		"position": { "x": 2871584000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 9985.2 },
 		"mass": 3.014e21,
 		"radius": 7.614e5
 	},
-	"neptune": {
+	"Neptune": {
 		"position": { "x": 4498000000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 5430.0 },
 		"mass": 1.0243e26,
 		"radius": 2.4622e7
 	},
-	"proteus": {
+	"Proteus": {
 		"position": { "x": 4498092800000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 13053.0 },
 		"mass": 4.4e19,
 		"radius": 2.1e5
 	},
-	"triton": {
+	"Triton": {
 		"position": { "x": 4498330000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 1040.0 },
 		"mass": 2.14e22,
 		"radius": 2.7e6
 	},
-	"nereid": {
+	"Nereid": {
 		"position": { "x": 4503488650000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 6364.0 },
 		"mass": 3.1e19,
 		"radius": 1.7e5
 	},
-	"pluto": {
+	"Pluto": {
 		"position": { "x": 5906380000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 4670.0 },
 		"mass": 1.303e22,
 		"radius": 1.187e6
 	},
-	"charon": {
+	"Charon": {
 		"position": { "x": 5906399640000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 4880.0 },
 		"mass": 1.587e21,
 		"radius": 1.172e6
 	},
-	"eris": {
+	"Eris": {
 		"position": { "x": 14062000000000.0, "y": 0.0 },
 		"velocity": { "x": 0.0, "y": 3433.8 },
 		"mass": 1.66e22,

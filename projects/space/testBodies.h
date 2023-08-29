@@ -161,6 +161,9 @@ namespace TestBodies
 		{
 			col3 color = CurrentBody && *CurrentBody == i ? rgb(50, 200, 50) : rgb(50, 50, 200);
 			drawCircle((vec2)bodies.GetCurrentPosition(i), Common::GetZoomIndependentSize(0.1f), color);
+
+			auto offset = vec2(Common::GetZoomIndependentSize(0.1f), Common::GetZoomIndependentSize(0.1f));
+			drawText((vec2)bodies.GetCurrentPosition(i) + offset, bodies.bodies[i].name, Common::GetZoomIndependentSize(0.5f), rgb(150, 150, 150));
 		}
 
 		if (CurrentBody)
