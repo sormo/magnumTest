@@ -1,5 +1,6 @@
 #pragma once
 #include <Magnum2D.h>
+#include <nlohmann/json.hpp>
 
 namespace Unit
 {
@@ -57,6 +58,7 @@ namespace Utils
 	private:
 		// how much distance was mouse moved while pressed
 		float accumulatedMouseDelta = 0.0f;
-
 	};
+
+	nlohmann::json ReadJsonFromResource(std::string_view group, std::string_view file);
 }

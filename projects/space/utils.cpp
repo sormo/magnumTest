@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "common.h"
 #include <random>
+#include <Corrade/Utility/Resource.h>
 
 using namespace Magnum2D;
 
@@ -126,6 +127,15 @@ namespace Utils
 			result[i] = rand() % 25 + 97;
 
 		return result;
+	}
+
+	nlohmann::json ReadJsonFromResource(std::string_view group, std::string_view file)
+	{
+		Corrade::Utility::Resource resource(group.data());
+
+		auto data = resource.getString(file.data());
+
+		return nlohmann::json::parse(data.data());
 	}
 }
 

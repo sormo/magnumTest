@@ -35,8 +35,6 @@ namespace TestBodies
 
 	Bodies bodies;
 
-	std::vector<col3> colors;
-
 	void RefreshEffectiveRadius()
 	{
 		for (auto& body : bodies.bodies)
@@ -113,30 +111,25 @@ namespace TestBodies
 		Unit::SetBaseKilogram(1.0 / 2e30);
 		Unit::SetBaseSecond(1e-7 / Utils::Pi);
 
-		double massSun = 1.989e30 * Unit::Kilogram;
-		double massEarth = 5.972e24 * Unit::Kilogram;
-		double massMoon = 7.348e22 * Unit::Kilogram;
-		double distanceSunEarth = 1.518e11 * Unit::Meter;
-		double distanceEarthMoon = 3.844e8 * Unit::Meter;
-		double velocityEarth = 2.9722e4 * Unit::Meter / Unit::Second;
-		double velocityMoon = 1.020e3 * Unit::Meter / Unit::Second;
-
 		GravitationalConstant = 4.0 * Utils::Pi * Utils::Pi;
 		SimulationDt = Unit::Hour;
 
-		auto createBody = [](const char* name, double positionX, double velocityY, double mass)
+		auto createBody = [](const char* name, vec2d position, vec2d velocity, double mass)
 		{
-			auto position = vec2d(positionX, 0.0);
-			auto velocity = vec2d(0.0, velocityY);
-
 			bodies.AddBody(name, position, velocity, mass);
-			colors.push_back(Utils::GetRandomColor());
 		};
 
-		createBody("Sun", 0.0, 0.0, massSun);
-		createBody("Earth", distanceSunEarth, velocityEarth, massEarth);
-		createBody("Moon", (distanceSunEarth + distanceEarthMoon), (velocityMoon + velocityEarth), massMoon);
+		auto data = Utils::ReadJsonFromResource("systems", "solar_system.json");
 
+		for (auto&[nameJson, body] : data.items())
+		{
+			const char* name = nameJson.c_str();
+			vec2d position = { (double)body["position"]["x"] * Unit::Meter, (double)body["position"]["y"] * Unit::Meter };
+			vec2d velocity = { (double)body["velocity"]["x"] * Unit::Meter / Unit::Second, (double)body["velocity"]["y"] * Unit::Meter / Unit::Second };
+			double mass = (double)body["mass"] * Unit::Kilogram;
+
+			bodies.AddBody(name, position, velocity, mass);
+		}
 	}
 
 	void Setup()

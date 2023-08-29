@@ -24,7 +24,7 @@ set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
 corrade_add_resource(Magnum2D_RESOURCES assets/resources.conf)
 
-add_library(Magnum2D STATIC Magnum2D.h Magnum2D.cpp ${Magnum2D_RESOURCES})
+add_library(Magnum2D STATIC Magnum2D.h Magnum2D.cpp magnum.natvis ${Magnum2D_RESOURCES})
 target_link_libraries(Magnum2D PRIVATE
     Magnum::Application
     Magnum::GL

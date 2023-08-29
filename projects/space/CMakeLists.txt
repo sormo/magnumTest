@@ -13,6 +13,8 @@ set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(_SILENCE_ALL_CXX20_DEPRECATION_WARNINGS)
 
+corrade_add_resource(Space_RESOURCES assets/resources.conf)
+
 add_executable(space main.cpp
                      utils.h
                      utils.cpp
@@ -37,7 +39,8 @@ add_executable(space main.cpp
                      testMassPoint.h
                      testBodies.h
                      bodies.h
-                     bodies.cpp)
+                     bodies.cpp
+                     ${Space_RESOURCES})
 
 target_link_libraries(space PRIVATE Magnum2D)
 
