@@ -11,6 +11,7 @@ set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
 set(MAGNUM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/magnum/src)
 set(CORRADE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/corrade/src)
 set(MAGNUM2D_DIR ${CMAKE_CURRENT_SOURCE_DIR}/magnum2d)
+set(JSON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/json/include)
 set(MAGNUM_WITH_IMGUI ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum-integration EXCLUDE_FROM_ALL)
 
@@ -18,6 +19,7 @@ include_directories(${IMGUI_DIR})
 include_directories(${MAGNUM_DIR})
 include_directories(${CORRADE_DIR})
 include_directories(${MAGNUM2D_DIR})
+include_directories(${JSON_DIR})
 
 include_directories(${CMAKE_BINARY_DIR}/magnum/src)
 
