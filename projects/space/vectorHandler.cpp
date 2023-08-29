@@ -99,7 +99,7 @@ void VectorHandler::Draw()
 {
 	for (size_t i = 0; i < vectors.size(); i++)
 	{
-		Utils::DrawVector(vectors[i].from, vectors[i].to - vectors[i].from, Magnum2D::rgb(255, 255, 255));
+		Utils::DrawVector(vectors[i].from, vectors[i].to - vectors[i].from, Magnum2D::rgb(120, 120, 120));
 
 		if (vectors[i].onFromChange)
 		{

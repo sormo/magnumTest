@@ -202,6 +202,9 @@ namespace TestBodies
 			}
 		}
 
+		// vector handler returns true if vector is grabbed
+		bool result = bodies.vectorHandler.Update();
+
 		if (clickHandler.IsClick())
 		{
 			auto previousCurrentBody = CurrentBody;
@@ -211,7 +214,7 @@ namespace TestBodies
 			{
 				if (clickBody)
 					bodies.SetParent(*clickBody, *CurrentBody);
-				else
+				else if (!result) // this is pretty tricky, we will allow to unselect only if we are not messing with vectors
 					bodies.ClearParent(*CurrentBody);
 			}
 			else
@@ -223,8 +226,6 @@ namespace TestBodies
 		}
 
 		clickHandler.Update();
-
-		bool result = bodies.vectorHandler.Update();
 
 		Draw();
 

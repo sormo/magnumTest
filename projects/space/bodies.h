@@ -14,7 +14,7 @@ using namespace Magnum2D;
 
 struct Bodies
 {
-	const float ForceDrawFactor = 0.2f;
+	const float ForceDrawFactor = 0.1f;
 
 	size_t AddBody(const char* name, vec2d position, vec2d velocity, double mass = 1.0);
 
