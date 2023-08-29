@@ -52,7 +52,7 @@ struct Rectangle
 	}
 };
 
-void testWindow()
+void drawGui()
 {
 	static bool is_open = false;
 
@@ -438,8 +438,6 @@ void grabRope()
 
 void draw()
 {
-	testWindow();
-
 	//if (Magnum2D::isKeyDown('a') || Magnum2D::isKeyPressed('s'))
 	{
 		simmulateStep(g_rope);

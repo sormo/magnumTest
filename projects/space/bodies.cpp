@@ -136,16 +136,17 @@ void Bodies::Draw(bool euler, bool verlet, bool rungeKutta)
 	{
 		if (body.parent)
 		{
-			auto index = bodies[*body.parent].GetSimulation<PointRungeKutta>().trajectoryGlobal.getPoint(TestBodies::CurrentTime);
+			auto index = bodies[*body.parent].GetSimulation<PointRungeKutta>().currentIndex;
 			auto currentParentGlobalPosition = bodies[*body.parent].GetSimulation<PointRungeKutta>().trajectoryGlobal.positions[index];
 			setTransform({ currentParentGlobalPosition, 0.0f });
 		}
+
 		if (euler)
-			body.GetSimulation<PointEuler>().trajectoryParent.draw(0.0, TestBodies::CurrentTime, rgb(50,50,50));
+			body.GetSimulation<PointEuler>().trajectoryParent.draw(0, body.GetSimulation<PointEuler>().currentIndex, rgb(50, 50, 50));
 		if (verlet)
-			body.GetSimulation<PointVerlet>().trajectoryParent.draw(0.0, TestBodies::CurrentTime, rgb(100,100,100));
+			body.GetSimulation<PointVerlet>().trajectoryParent.draw(0, body.GetSimulation<PointVerlet>().currentIndex, rgb(100, 100, 100));
 		if (rungeKutta)
-			body.GetSimulation<PointRungeKutta>().trajectoryParent.draw(0.0, TestBodies::CurrentTime, body.color);
+			body.GetSimulation<PointRungeKutta>().trajectoryParent.draw(0, body.GetSimulation<PointRungeKutta>().currentIndex, body.color);
 
 		setTransform({});
 	}
@@ -158,6 +159,14 @@ vec2 Bodies::GetPosition(size_t index, double time)
 
 	auto positionIndex = bodies[index].GetSimulation<PointRungeKutta>().trajectoryGlobal.getPoint(time);
 	return bodies[index].GetSimulation<PointRungeKutta>().trajectoryGlobal.positions[positionIndex];
+}
+
+vec2 Bodies::GetCurrentPosition(size_t index)
+{
+	if (bodies[index].GetSimulation<PointRungeKutta>().trajectoryGlobal.positions.empty())
+		return (vec2)bodies[index].initialPosition;
+
+	return bodies[index].GetSimulation<PointRungeKutta>().trajectoryGlobal.positions[bodies[index].GetSimulation<PointRungeKutta>().currentIndex];
 }
 
 std::optional<size_t> Bodies::SelectBody(double time, const vec2& selectPosition, float selectRadius)

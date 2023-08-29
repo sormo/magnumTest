@@ -119,6 +119,11 @@ void gui()
 	ImGui::End();
 }
 
+void drawGui()
+{
+	gui();
+}
+
 void draw()
 {
 	//setTransform({ {4.0f, 5.0}, 0.0f });
@@ -132,7 +137,6 @@ void draw()
 	//setTransform({});
 
 	camera.Draw();
-	gui();
 
 	bool allowCameraMove = true;
 

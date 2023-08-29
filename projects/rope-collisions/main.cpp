@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <array>
 
-void testWindow()
+void drawGui()
 {
 	static bool is_open = false;
 
@@ -196,8 +196,6 @@ void grabRope()
 
 void draw()
 {
-	testWindow();
-
 	//if (Magnum2D::isKeyDown('a') || Magnum2D::isKeyPressed('s'))
 	{
 		g_app->rope.SimmulateStep();

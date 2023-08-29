@@ -38,7 +38,8 @@
 #include <set>
 
 void setup();
-void draw(); 
+void draw();
+void drawGui();
 
 using namespace Magnum;
 using namespace Math::Literals;
@@ -282,6 +283,12 @@ void MyApplication::setupText()
     CORRADE_INTERNAL_ASSERT(m_fontGlyphCache);
 }
 
+void prepareRendererDraw()
+{
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+}
+
 void MyApplication::drawEvent()
 {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
@@ -298,23 +305,26 @@ void MyApplication::drawEvent()
 
     // drawing
 
-    imguiDrawBegin();
-    
+    prepareRendererDraw();
+
     draw();
 
-    imguiDrawEnd();
-    
     m_rectanle.Draw(m_shader, m_cameraProjection);
     m_rectanleOutline.Draw(m_shader, m_cameraProjection);
     m_circle.Draw(m_shader, m_cameraProjection);
     m_circleOutline.Draw(m_shader, m_cameraProjection);
 
+    imguiDrawBegin();
+    
+    drawGui();
+
+    imguiDrawEnd();
+
     // line cache - clear meshes which were not drawn
     m_lineMeshCache.Update();
     m_textRendererCache.Update();
 
-    swapBuffers();
-    redraw();
+    m_windowResized = false;
 
     // input stuff
 
@@ -325,22 +335,25 @@ void MyApplication::drawEvent()
     m_mouseDelta.x() = 0; m_mouseDelta.y() = 0;
     m_mouseScroll.x() = 0; m_mouseScroll.y() = 0;
 
-    m_windowResized = false;
+    // finish
+
+    swapBuffers();
+    redraw();
 }
 
 void MyApplication::imguiInit()
 {
     g_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
+}
 
+void MyApplication::imguiDrawBegin()
+{
     GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 
     GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-}
 
-void MyApplication::imguiDrawBegin()
-{
     g_imgui.newFrame();
     if (ImGui::GetIO().WantTextInput && !isTextInputActive())
         startTextInput();

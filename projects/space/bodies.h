@@ -24,6 +24,7 @@ struct Bodies
 	void Draw(bool euler, bool verlet, bool rungeKutta);
 
 	vec2 GetPosition(size_t index, double time);
+	vec2 GetCurrentPosition(size_t index);
 
 	std::optional<size_t> SelectBody(double time, const vec2& selectPosition, float selectRadius);
 
@@ -40,6 +41,12 @@ struct Bodies
 
 		Trajectory trajectoryGlobal;
 		Trajectory trajectoryParent;
+
+		size_t currentIndex = 0;
+		void SetCurrentIndex(double currentTime)
+		{
+			currentIndex = trajectoryGlobal.getPoint(currentTime);
+		}
 
 		void Clear()
 		{
@@ -88,6 +95,13 @@ struct Bodies
 			simulationVerlet.currentPoint.recomputeEffectiveRadius();
 			simulationRK4.initialPoint.recomputeEffectiveRadius();
 			simulationRK4.currentPoint.recomputeEffectiveRadius();
+		}
+
+		void SetCurrentTime(double time)
+		{
+			simulationEuler.SetCurrentIndex(time);
+			simulationVerlet.SetCurrentIndex(time);
+			simulationRK4.SetCurrentIndex(time);
 		}
 	};
 

@@ -156,18 +156,24 @@ namespace TestBodies
 
 	void Draw()
 	{
+		if (SimulatedTime != 0.0)
+		{
+			for (size_t i = 0; i < bodies.bodies.size(); i++)
+				bodies.bodies[i].SetCurrentTime(CurrentTime);
+		}
+
 		bodies.Draw(DrawFlags & DrawFlagEuler, DrawFlags & DrawFlagVerlet, DrawFlags & DrawFlagRungeKutta);
 
 		for (size_t i = 0; i < bodies.bodies.size(); i++)
 		{
 			col3 color = CurrentBody && *CurrentBody == i ? rgb(50, 200, 50) : rgb(50, 50, 200);
-			drawCircle((vec2)bodies.GetPosition(i, CurrentTime), Common::GetZoomIndependentSize(0.1f), color);
+			drawCircle((vec2)bodies.GetCurrentPosition(i), Common::GetZoomIndependentSize(0.1f), color);
 		}
 
 		if (CurrentBody)
 		{
 			float effectiveRadius = bodies.bodies[*CurrentBody].GetSimulation<PointRungeKutta>().initialPoint.getEffectiveRadius();
-			auto position = bodies.GetPosition(*CurrentBody, CurrentTime);
+			auto position = bodies.GetCurrentPosition(*CurrentBody);
 
 			drawCircleOutline(position, effectiveRadius, rgb(50, 50, 50));
 		}
@@ -176,6 +182,11 @@ namespace TestBodies
 	bool Update()
 	{
 		UdpateCurrentTime();
+
+		if (IsCameraFollow)
+		{
+			setCameraCenter(bodies.GetCurrentPosition(*CurrentBody));
+		}
 
 		if (isMousePressed())
 		{
@@ -216,11 +227,6 @@ namespace TestBodies
 		bool result = bodies.vectorHandler.Update();
 
 		Draw();
-
-		if (IsCameraFollow)
-		{
-			setCameraCenter(bodies.GetPosition(*CurrentBody, CurrentTime));
-		}
 
 		if (result)
 		{

@@ -8,7 +8,7 @@ void setup()
 
 }
 
-void gui()
+void drawGui()
 {
 	static bool is_open = false;
 
@@ -39,7 +39,5 @@ void gui()
 
 void draw()
 {
-	gui();
-
 	drawCircle({ 0,0 }, 1.0f, rgb(0, 0, 255));
 }

@@ -8,7 +8,7 @@ void setup()
 
 }
 
-void gui()
+void drawGui()
 {
 	static bool is_open = false;
 
@@ -63,8 +63,6 @@ void cameraControl()
 
 void draw()
 {
-	gui();
-
 	cameraControl();
 
 	drawCircle({ 0,0 }, 1.0f, rgb(0, 0, 255));
