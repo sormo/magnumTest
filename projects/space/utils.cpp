@@ -23,22 +23,22 @@ namespace Utils
 		return rgb(rand() % 255, rand() % 255 , rand() % 255);
 	}
 
-	Magnum2D::vec2 RotateVector(const Magnum2D::vec2& vector, float radians)
+	vec2 RotateVector(const vec2& vector, float radians)
 	{
 		return { std::cos(radians) * vector.x() - std::sin(radians) * vector.y(), std::sin(radians) * vector.x() + std::cos(radians) * vector.y() };
 	}
 
-	Magnum2D::vec2d RotateVector(const Magnum2D::vec2d& vector, double radians)
+	vec2d RotateVector(const vec2d& vector, double radians)
 	{
 		return { std::cos(radians) * vector.x() - std::sin(radians) * vector.y(), std::sin(radians) * vector.x() + std::cos(radians) * vector.y() };
 	}
 
-	double GetAngle(const Magnum2D::vec2d& vector)
+	double GetAngle(const vec2d& vector)
 	{
 		return atan2(vector.y(), vector.x());
 	}
 
-	void DrawVector(const vec2& position, const vec2& vector, const Magnum2D::col3& color)
+	void DrawVector(const vec2& position, const vec2& vector, const col3& color)
 	{
 		static const float ArrowAngle = 10 * Deg2Rad;
 		static const float ArrowSize = 0.2f;
@@ -58,7 +58,7 @@ namespace Utils
 		Common::DrawLines({ destPosition, destPosition + arrowRight }, LineWidth, color);
 	}
 
-	void DrawCross(const Magnum2D::vec2& position, float size, const Magnum2D::col3& color)
+	void DrawCross(const vec2& position, float size, const col3& color)
 	{
 		const float LineWidth = Common::GetZoomIndependentSize(0.03f);
 		float hsize = size / 2.0f;
@@ -85,7 +85,7 @@ namespace Utils
 		return result;
 	}
 
-	float DistanceSqr(const Magnum2D::vec2& p1, const Magnum2D::vec2& p2)
+	float DistanceSqr(const vec2& p1, const vec2& p2)
 	{
 		float dx = p1.x() - p2.x();
 		float dy = p1.y() - p2.y();
@@ -93,7 +93,7 @@ namespace Utils
 		return dx * dx + dy * dy;
 	}
 
-	double DistanceSqr(const Magnum2D::vec2d& p1, const Magnum2D::vec2d& p2)
+	double DistanceSqr(const vec2d& p1, const vec2d& p2)
 	{
 		double dx = p1.x() - p2.x();
 		double dy = p1.y() - p2.y();
@@ -101,19 +101,19 @@ namespace Utils
 		return dx * dx + dy * dy;
 	}
 
-	float LenghtSqr(const Magnum2D::vec2& p)
+	float LenghtSqr(const vec2& p)
 	{
 		return p.x() * p.x() + p.y() * p.y();
 	}
 
-	double LenghtSqr(const Magnum2D::vec2d& p)
+	double LenghtSqr(const vec2d& p)
 	{
 		return p.x() * p.x() + p.y() * p.y();
 	}
 
 	bool ClickHandler::IsClick()
 	{
-		return Magnum2D::isMouseReleased() && accumulatedMouseDelta < MouseDeltaSqrThreshold;
+		return isMouseReleased() && accumulatedMouseDelta < MouseDeltaSqrThreshold;
 	}
 
 	void ClickHandler::Update()
@@ -159,6 +159,84 @@ namespace Utils
 			accumulatedMeanDistances += fabs(e - mean);
 
 		return accumulatedMeanDistances / (double)data.size();
+	}
+
+	bool SigmaCompare(double a, double b, double sigma)
+	{
+		return std::fabs(a - b) <= sigma;
+	}
+
+	double ComputeDpt(double a, double b, double theta)
+	{
+		double dpt_sin = pow(a * sin(theta), 2.0f);
+		double dpt_cos = pow(b * cos(theta), 2.0f);
+
+		return sqrt(dpt_sin + dpt_cos);
+	}
+
+	std::vector<vec2d> GenerateEllipsePoints(double a, double b)
+	{
+		static const double EllipsePoints = 300.0;
+
+		std::vector<vec2d> points;
+		double theta = 0.0;
+		double twoPi = Utils::Pi * 2.0;
+		double deltaTheta = 0.0001f;
+		double numIntegrals = round(twoPi / deltaTheta);
+		double circ = 0.0;
+		double dpt = 0.0;
+
+		/* integrate over the elipse to get the circumference */
+		for (int i = 0; i < numIntegrals; i++)
+		{
+			theta += i * deltaTheta;
+			dpt = ComputeDpt(a, b, theta);
+			circ += dpt;
+		}
+
+		int nextPoint = 0;
+		double run = 0.0;
+
+		theta = 0.0;
+
+		for (int i = 0; i < numIntegrals; i++)
+		{
+			theta += deltaTheta;
+			double subIntegral = EllipsePoints * run / circ;
+			if ((int)subIntegral >= nextPoint)
+			{
+				double x = a * cos(theta);
+				double y = b * sin(theta);
+				points.push_back({ x, y });
+				nextPoint++;
+			}
+			run += ComputeDpt(a, b, theta);
+		}
+
+		return points;
+	}
+
+	std::vector<vec2d> GenerateHyperbolaPoints(double a, double b)
+	{
+		std::vector<vec2d> result;
+
+		// generate two halfs of hyperbola
+
+		for (double theta = -40.0f; theta < 40.0f; theta += 0.1f)
+		{
+			double x = a * cosh(theta);
+			double y = b * sinh(theta);
+			result.push_back({ x, y });
+		}
+
+		for (double theta = -40.0f; theta < 40.0f; theta += 0.1f)
+		{
+			double x = -a * cosh(theta);
+			double y = -b * sinh(theta);
+			result.push_back({ x, y });
+		}
+
+		return result;
 	}
 }
 

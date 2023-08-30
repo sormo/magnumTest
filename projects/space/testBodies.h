@@ -120,6 +120,7 @@ namespace TestBodies
 		};
 
 		auto data = Utils::ReadJsonFromResource("systems", "solar_system.json");
+		//auto data = Utils::ReadJsonFromResource("systems", "test_system.json");
 
 		for (auto&[nameJson, body] : data.items())
 		{

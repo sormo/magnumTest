@@ -2,6 +2,7 @@
 #include <Magnum2D.h>
 #include "vectorHandler.h"
 #include "simulation.h"
+#include "conicfit/conicApproximation.h"
 #include <set>
 
 namespace TestBodies
@@ -33,6 +34,7 @@ struct Bodies
 	void ClearParent(size_t child);
 
 	void ComputeParents();
+	void ComputeConics();
 
 	double simulatedTime = 0.0;
 
@@ -108,7 +110,20 @@ struct Bodies
 			simulationVerlet.SetCurrentIndex(time);
 			simulationRK4.SetCurrentIndex(time);
 		}
+
+		struct Conic
+		{
+			vec2 position;
+			float rotation;
+			std::vector<vec2> points;
+		};
+
+		Conic conicApproximatedFromPoints;
+		Conic conicComputedFromParent;
 	};
+
+	void DrawConic(const Magnum2D::vec2& parentPosition, Body::Conic& conic, float width, const Magnum2D::col3& color);
+	Body::Conic CreateConicFromApproximation(const ConicApproximation::Conic& conic);
 
 	std::vector<Body> bodies;
 

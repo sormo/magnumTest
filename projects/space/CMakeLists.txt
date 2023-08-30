@@ -40,6 +40,9 @@ add_executable(space main.cpp
                      testBodies.h
                      bodies.h
                      bodies.cpp
+                     conicfit/conicApproximation.h
+                     conicfit/conicApproximation.cpp
+                     conicfit/conicFit.h
                      ${Space_RESOURCES})
 
 target_link_libraries(space PRIVATE Magnum2D)

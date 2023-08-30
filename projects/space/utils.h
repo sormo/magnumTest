@@ -29,7 +29,7 @@ namespace Unit
 
 namespace Utils
 {
-	const float Deg2Rad = 0.0174533f;
+	const double Deg2Rad = 0.0174533;
 	const double Pi = 3.1415926535897931;
 
 	Magnum2D::vec2 GetRandomPosition(float xmin, float xmax, float ymin, float ymax); // ranges are inclusive
@@ -54,6 +54,8 @@ namespace Utils
 	std::vector<Magnum2D::vec2> ConvertToFloat(const std::vector<Magnum2D::vec2d>& arr);
 	std::vector<float> ConvertToFloat(const std::vector<double>& arr);
 
+	bool SigmaCompare(double a, double b, double sigma = 0.0000000001);
+
 	struct ClickHandler
 	{
 		static constexpr float MouseDeltaSqrThreshold = 0.15f * 0.15f;
@@ -67,4 +69,7 @@ namespace Utils
 	};
 
 	nlohmann::json ReadJsonFromResource(std::string_view group, std::string_view file);
+
+	std::vector<Magnum2D::vec2d> GenerateEllipsePoints(double a, double b);
+	std::vector<Magnum2D::vec2d> GenerateHyperbolaPoints(double a, double b);
 }

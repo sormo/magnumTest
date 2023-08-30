@@ -1,4 +1,5 @@
 #include "bodies.h"
+#include "common.h"
 
 size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double mass)
 {
@@ -116,6 +117,7 @@ void Bodies::SimulateClear(double time)
 	simulatedTime = time;
 
 	ComputeParents();
+	ComputeConics();
 }
 
 void Bodies::SimulateExtend(double time)
@@ -127,6 +129,14 @@ void Bodies::SimulateExtend(double time)
 	simulatedTime += time;
 
 	ComputeParents();
+	ComputeConics();
+}
+
+void Bodies::DrawConic(const vec2& parentPosition, Body::Conic& conic, float width, const Magnum2D::col3& color)
+{
+	setTransform({ conic.position + parentPosition, conic.rotation });
+	Common::DrawPolyline(conic.points, Common::GetZoomIndependentSize(width), color);
+	setTransform({});
 }
 
 void Bodies::Draw(bool euler, bool verlet, bool rungeKutta)
@@ -138,11 +148,11 @@ void Bodies::Draw(bool euler, bool verlet, bool rungeKutta)
 
 	for (auto& body : bodies)
 	{
+		auto parentPosition = body.parent ? GetCurrentPosition(*body.parent) : vec2{};
+
 		if (body.parent)
 		{
-			auto index = bodies[*body.parent].GetSimulation<PointRungeKutta>().currentIndex;
-			auto currentParentGlobalPosition = bodies[*body.parent].GetSimulation<PointRungeKutta>().trajectoryGlobal.positions[index];
-			setTransform({ currentParentGlobalPosition, 0.0f });
+			setTransform({ parentPosition, 0.0f });
 		}
 
 		if (euler)
@@ -153,6 +163,11 @@ void Bodies::Draw(bool euler, bool verlet, bool rungeKutta)
 			body.GetSimulation<PointRungeKutta>().trajectoryParent.draw(0, body.GetSimulation<PointRungeKutta>().currentIndex, body.color);
 
 		setTransform({});
+
+		DrawConic(parentPosition, body.conicApproximatedFromPoints, 0.03f, rgb(80, 80, 80));
+
+		if (body.parent)
+			DrawConic(parentPosition, body.conicComputedFromParent, 0.03f, rgb(150, 80, 80));
 	}
 }
 
@@ -279,6 +294,59 @@ void Bodies::ComputeParents()
 
 			if (value < PeriodicOrbitFocusSigma)
 				SetParent(pair.first, pair.second);
+		}
+	}
+}
+
+Bodies::Body::Conic Bodies::CreateConicFromApproximation(const ConicApproximation::Conic& conic)
+{
+	Body::Conic result;
+
+	switch (conic.GetType())
+	{
+	case ConicApproximation::Conic::Type::ellipse:
+	{
+		auto ellipse = conic.GetEllipse();
+		result.points = Utils::ConvertToFloat(Utils::GenerateEllipsePoints(ellipse.radius.x(), ellipse.radius.y()));
+		// TODO we are using polyline, possibly better solution will be scaled circle
+		result.points.push_back(result.points[0]);
+		result.position = (vec2)ellipse.position;
+		result.rotation = (float)ellipse.angle;
+	}
+	break;
+	case ConicApproximation::Conic::Type::hyperbola:
+	{
+		auto hyperbola = conic.GetHyperbola();
+		result.points = Utils::ConvertToFloat(Utils::GenerateHyperbolaPoints(hyperbola.radius.x(), hyperbola.radius.y()));
+		result.position = (vec2)hyperbola.position;
+		result.rotation = (float)hyperbola.angle;
+	}
+	break;
+	}
+
+	return result;
+}
+
+void Bodies::ComputeConics()
+{
+	for (auto& body : bodies)
+	{
+		// TODO
+		std::vector<vec2d> positions(body.GetSimulation<PointRungeKutta>().trajectoryParent.positions.size());
+		for (size_t i = 0; i < positions.size(); i++)
+			positions[i] = (vec2d)body.GetSimulation<PointRungeKutta>().trajectoryParent.positions[i];
+
+		if (!positions.empty())
+		{
+			body.conicApproximatedFromPoints = CreateConicFromApproximation(ConicApproximation::ApproximateConic(positions));
+		}
+		if (body.parent)
+		{
+			auto initialPositionParentRelative = body.initialPosition - bodies[*body.parent].initialPosition;
+			auto initialVelocityParentRelative = body.initialVelocity - bodies[*body.parent].initialVelocity;
+
+			auto computedConic = ConicApproximation::ComputeConic(bodies[*body.parent].mass, body.mass, initialPositionParentRelative, initialVelocityParentRelative);
+			body.conicComputedFromParent = CreateConicFromApproximation(computedConic);
 		}
 	}
 }
