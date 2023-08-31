@@ -58,7 +58,7 @@ namespace Utils
 
 	struct ClickHandler
 	{
-		static constexpr float MouseDeltaSqrThreshold = 0.15f * 0.15f;
+		static constexpr float MouseDeltaSqrThreshold = 0.015f * 0.015f;
 
 		bool IsClick();
 		void Update();

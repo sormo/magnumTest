@@ -2,6 +2,7 @@
 #include "Magnum2D.h"
 #include <optional>
 #include <functional>
+#include <map>
 
 struct VectorHandler
 {
@@ -10,17 +11,28 @@ struct VectorHandler
 
 	using OnChange = std::function<Magnum2D::vec2(const Magnum2D::vec2&, void*)>;
 
+	using Vector = uint64_t;
+
 	// return true if some vector handle is highlighted
 	bool UpdateHighlight();
-	// return true if mouse is captured
-	bool Update();
+	
+	struct UpdateResult
+	{
+		bool isInputGrabbed;
+		bool isVectorChanged;
+	};
+	UpdateResult Update();
 
 	void Draw();
 
-	void Push(Magnum2D::vec2 from, Magnum2D::vec2 to, void* context, OnChange onFromChange, OnChange onToChange);
+	Vector Push(Magnum2D::vec2 from, Magnum2D::vec2 to, void* context, OnChange onFromChange, OnChange onToChange);
+	void ChangeFrom(Vector vector, const Magnum2D::vec2& from); // preserve the vector size
+	void SetTo(Vector vector, const Magnum2D::vec2& to); // does not preserve, do not call callback, just set to to to (: (like give me my black backpack back)
+
+	bool IsGrab(Vector vector);
 
 	void Clear();
-
+	void ClearGrab();
 	void ClearOnlyVectors();
 
 	auto begin()
@@ -33,8 +45,13 @@ struct VectorHandler
 		return vectors.end();
 	}
 
+	// do not call callbacks until the grab distance is not more than threshold
+	float thresholdDistanceZoomIndependent = 0.0f;
+
 private:
-	struct Vector
+	static Vector VectorCounter;
+
+	struct VectorData
 	{
 		Magnum2D::vec2 from;
 		Magnum2D::vec2 to;
@@ -44,14 +61,14 @@ private:
 		OnChange onToChange;
 	};
 
-	std::vector<Vector> vectors;
+	std::map<Vector, VectorData> vectors;
 
 	enum class HandleType { From, To };
 
-	std::optional<size_t> grabVec;
+	std::optional<Vector> grabVec;
 	HandleType grabType;
 	Magnum2D::vec2 grabOffset;
 
-	std::optional<size_t> highlightVec;
+	std::optional<Vector> highlightVec;
 	HandleType highlightType;
 };

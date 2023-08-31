@@ -113,7 +113,7 @@ namespace Utils
 
 	bool ClickHandler::IsClick()
 	{
-		return isMouseReleased() && accumulatedMouseDelta < MouseDeltaSqrThreshold;
+		return isMouseReleased() && accumulatedMouseDelta < Common::GetZoomIndependentSize(MouseDeltaSqrThreshold);
 	}
 
 	void ClickHandler::Update()

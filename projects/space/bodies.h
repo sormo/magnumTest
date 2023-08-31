@@ -15,14 +15,14 @@ using namespace Magnum2D;
 
 struct Bodies
 {
-	const float ForceDrawFactor = 0.1f;
+	static const float ForceDrawFactor;
 
 	size_t AddBody(const char* name, vec2d position, vec2d velocity, double mass = 1.0);
 
 	void SimulateClear(double time);
 	void SimulateExtend(double time);
 
-	void Draw(bool euler, bool verlet, bool rungeKutta);
+	void Draw(bool euler, bool verlet, bool rungeKutta, bool approximated, bool computed);
 
 	vec2 GetPosition(size_t index, double time);
 	vec2 GetCurrentPosition(size_t index);
@@ -30,8 +30,12 @@ struct Bodies
 
 	std::optional<size_t> SelectBody(double time, const vec2& selectPosition, float selectRadius);
 
-	void SetParent(size_t parent, size_t child);
-	void ClearParent(size_t child);
+	void SetParentUser(size_t child, std::optional<size_t> parent);
+	void SetParentSimulation(size_t child, std::optional<size_t> parent);
+	void SetParentCommon(size_t child, std::optional<size_t> parent);
+
+	void SetParentInternal(size_t child, size_t parent);
+	void ClearParentInternal(size_t child);
 
 	void ComputeParents();
 	void ComputeConics();
@@ -64,8 +68,11 @@ struct Bodies
 	struct Body
 	{
 		std::string name;
+		// current parent
 		std::optional<size_t> parent;
 		std::set<size_t> childs;
+		// parent computed by simulation
+		std::optional<size_t> parentSimulation;
 
 		vec2d initialPosition;
 		vec2d initialVelocity;
@@ -74,6 +81,7 @@ struct Bodies
 		bool isStar = false;
 
 		col3 color;
+		VectorHandler::Vector initialVector;
 
 		BodySimulation<PointEuler> simulationEuler;
 		BodySimulation<PointVerlet> simulationVerlet;
@@ -111,6 +119,11 @@ struct Bodies
 			simulationRK4.SetCurrentIndex(time);
 		}
 
+		bool HasCorrectParent()
+		{
+			return parent == parentSimulation;
+		}
+
 		struct Conic
 		{
 			vec2 position;
@@ -123,7 +136,6 @@ struct Bodies
 	};
 
 	void DrawConic(const Magnum2D::vec2& parentPosition, Body::Conic& conic, float width, const Magnum2D::col3& color);
-	Body::Conic CreateConicFromApproximation(const ConicApproximation::Conic& conic);
 
 	std::vector<Body> bodies;
 

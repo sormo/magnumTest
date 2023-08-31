@@ -1,6 +1,8 @@
 #include "bodies.h"
 #include "common.h"
 
+const float Bodies::ForceDrawFactor = 0.06f;
+
 size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double mass)
 {
 	Body newBody;
@@ -24,19 +26,21 @@ size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double 
 	vec2 from = (vec2)position;
 	vec2 to = (vec2)(position + velocity * ForceDrawFactor);
 	VectorHandler::OnChange onFromChange = [this, index = bodies.size() - 1](const vec2& v, void*)
-		{
-			bodies[index].SetInitialState((vec2d)v, bodies[index].initialVelocity, bodies[index].mass);
-			return v;
-		};
+	{
+		bodies[index].SetInitialState((vec2d)v, bodies[index].initialVelocity, bodies[index].mass);
+		return v;
+	};
 	VectorHandler::OnChange onToChange = [this, index = bodies.size() - 1](const vec2& v, void*)
-		{
-			vec2d velocity = (vec2d)(v / ForceDrawFactor) - bodies[index].initialPosition;
+	{
+		vec2d vparent = bodies[index].parent ? bodies[*bodies[index].parent].initialVelocity : vec2d{};
+		vec2d vp = bodies[index].initialPosition + (bodies[index].initialVelocity - vparent) * ForceDrawFactor;
+		vec2d change = (vec2d)v - vp;
 
-			bodies[index].SetInitialState(bodies[index].initialPosition, velocity, bodies[index].mass);
-			return v;
-		};
+		bodies[index].SetInitialState(bodies[index].initialPosition, bodies[index].initialVelocity + change / ForceDrawFactor, bodies[index].mass);
+		return v;
+	};
 
-	vectorHandler.Push(from, to, nullptr, onFromChange, onToChange);
+	bodies.back().initialVector = vectorHandler.Push(from, to, nullptr, onFromChange, onToChange);
 
 	return bodies.size() - 1;
 }
@@ -45,19 +49,34 @@ template<class T>
 void ProcessTrajectoriesParentRecursive(size_t body, std::vector<Bodies::Body>& bodies)
 {
 	auto& simulation = bodies[body].GetSimulation<T>();
-	auto& trajectoryBody = simulation.trajectoryGlobal;
-	auto& trajectoryParent = bodies[*bodies[body].parent].GetSimulation<T>().trajectoryParent;
+	auto& trajectoryGlobal = simulation.trajectoryGlobal;
+	auto& trajectoryParent = simulation.trajectoryParent;
 
-	simulation.trajectoryParent.clear();
-
-	for (size_t i = 0; i < simulation.trajectoryGlobal.positions.size(); i++)
+	if (bodies[body].parent)
 	{
-		simulation.trajectoryParent.positions.push_back(trajectoryBody.positions[i] - trajectoryParent.positions[i]);
-		simulation.trajectoryParent.velocities.push_back(trajectoryBody.velocities[i] - trajectoryParent.velocities[i]);
+		auto& trajectoryOfParent = bodies[*bodies[body].parent].GetSimulation<T>().trajectoryParent;
+		trajectoryParent.clear();
+		for (size_t i = 0; i < simulation.trajectoryGlobal.positions.size(); i++)
+		{
+			trajectoryParent.positions.push_back(trajectoryGlobal.positions[i] - trajectoryOfParent.positions[i]);
+			trajectoryParent.velocities.push_back(trajectoryGlobal.velocities[i] - trajectoryOfParent.velocities[i]);
+		}
 	}
-	simulation.trajectoryParent.times = trajectoryBody.times;
+	else
+	{
+		trajectoryParent = trajectoryGlobal;
+	}
+
+	simulation.trajectoryParent.times = trajectoryGlobal.times;
 
 	for (size_t child : bodies[body].childs)
+		ProcessTrajectoriesParentRecursive<T>(child, bodies);
+}
+
+template<class T>
+void ProcessTrajectoriesParent(size_t parent, std::vector<Bodies::Body>& bodies)
+{
+	for (auto child : bodies[parent].childs)
 		ProcessTrajectoriesParentRecursive<T>(child, bodies);
 }
 
@@ -117,7 +136,6 @@ void Bodies::SimulateClear(double time)
 	simulatedTime = time;
 
 	ComputeParents();
-	ComputeConics();
 }
 
 void Bodies::SimulateExtend(double time)
@@ -129,7 +147,6 @@ void Bodies::SimulateExtend(double time)
 	simulatedTime += time;
 
 	ComputeParents();
-	ComputeConics();
 }
 
 void Bodies::DrawConic(const vec2& parentPosition, Body::Conic& conic, float width, const Magnum2D::col3& color)
@@ -139,15 +156,17 @@ void Bodies::DrawConic(const vec2& parentPosition, Body::Conic& conic, float wid
 	setTransform({});
 }
 
-void Bodies::Draw(bool euler, bool verlet, bool rungeKutta)
+void Bodies::Draw(bool euler, bool verlet, bool rungeKutta, bool approximated, bool computed)
 {
 	vectorHandler.Draw();
 	
 	if (simulatedTime == 0.0)
 		return;
 
-	for (auto& body : bodies)
+	for (size_t i = 0; i < bodies.size(); i++)
 	{
+		auto& body = bodies[i];
+
 		auto parentPosition = body.parent ? GetCurrentPosition(*body.parent) : vec2{};
 
 		if (body.parent)
@@ -164,10 +183,12 @@ void Bodies::Draw(bool euler, bool verlet, bool rungeKutta)
 
 		setTransform({});
 
-		DrawConic(parentPosition, body.conicApproximatedFromPoints, 0.03f, rgb(80, 80, 80));
+		if (approximated)
+			DrawConic(parentPosition, body.conicApproximatedFromPoints, 0.03f, rgb(80, 80, 80));
 
-		if (body.parent)
-			DrawConic(parentPosition, body.conicComputedFromParent, 0.03f, rgb(150, 80, 80));
+		// computed trajectory is wrong if parent is not correct
+		if (body.parent && computed)
+			DrawConic(parentPosition, body.conicComputedFromParent, 0.03f, !body.HasCorrectParent() ? rgb(80, 10, 10) : rgb(150, 80, 80));
 	}
 }
 
@@ -199,17 +220,139 @@ std::optional<size_t> Bodies::SelectBody(double time, const vec2& selectPosition
 	return {};
 }
 
-void Bodies::SetParent(size_t parent, size_t child)
+Bodies::Body::Conic CreateConicFromApproximation(const ConicApproximation::Conic& conic)
+{
+	Bodies::Body::Conic result;
+
+	switch (conic.GetType())
+	{
+	case ConicApproximation::Conic::Type::ellipse:
+	{
+		auto ellipse = conic.GetEllipse();
+		result.points = Utils::ConvertToFloat(Utils::GenerateEllipsePoints(ellipse.radius.x(), ellipse.radius.y()));
+		// TODO we are using polyline, possibly better solution will be scaled circle
+		result.points.push_back(result.points[0]);
+		result.position = (vec2)ellipse.position;
+		result.rotation = (float)ellipse.angle;
+	}
+	break;
+	case ConicApproximation::Conic::Type::hyperbola:
+	{
+		auto hyperbola = conic.GetHyperbola();
+		result.points = Utils::ConvertToFloat(Utils::GenerateHyperbolaPoints(hyperbola.radius.x(), hyperbola.radius.y()));
+		result.position = (vec2)hyperbola.position;
+		result.rotation = (float)hyperbola.angle;
+	}
+	break;
+	}
+
+	return result;
+}
+void ComputeConic(Bodies::Body& body, std::vector<Bodies::Body>& bodies)
+{
+	// TODO
+	std::vector<vec2d> positions(body.GetSimulation<PointRungeKutta>().trajectoryParent.positions.size());
+	for (size_t i = 0; i < positions.size(); i++)
+		positions[i] = (vec2d)body.GetSimulation<PointRungeKutta>().trajectoryParent.positions[i];
+
+	if (!positions.empty())
+	{
+		body.conicApproximatedFromPoints = CreateConicFromApproximation(ConicApproximation::ApproximateConic(positions));
+	}
+	if (body.parent)
+	{
+		auto initialPositionParentRelative = body.initialPosition - bodies[*body.parent].initialPosition;
+		auto initialVelocityParentRelative = body.initialVelocity - bodies[*body.parent].initialVelocity;
+
+		auto computedConic = ConicApproximation::ComputeConic(bodies[*body.parent].mass, body.mass, initialPositionParentRelative, initialVelocityParentRelative);
+		body.conicComputedFromParent = CreateConicFromApproximation(computedConic);
+	}
+}
+
+void ComputeConicRecursive(size_t body, std::vector<Bodies::Body>& bodies)
+{
+	ComputeConic(bodies[body], bodies);
+
+	for (auto child : bodies[body].childs)
+		ComputeConicRecursive(child, bodies);
+}
+
+void SetVelocityVectorSizeToParent(std::vector<Bodies::Body>& bodies, size_t body, VectorHandler& vectorHandler)
+{
+	vec2d parentVelocity = bodies[body].parent ? bodies[*bodies[body].parent].initialVelocity : vec2d{};
+	vec2 to = (vec2)(bodies[body].initialPosition + (bodies[body].initialVelocity - parentVelocity) * Bodies::ForceDrawFactor);
+	vectorHandler.SetTo(bodies[body].initialVector, to);
+}
+
+void Bodies::SetParentCommon(size_t child, std::optional<size_t> parent)
+{
+	if (bodies[child].parent)
+		ClearParentInternal(child);
+
+	if (parent)
+		SetParentInternal(child, *parent);
+	else
+		ClearParentInternal(child);
+
+	SetVelocityVectorSizeToParent(bodies, child, vectorHandler);
+}
+
+// Make sure that child is not within the subtree of body.
+void ClearChildFromBodyRecursive(Bodies& bodies, Bodies::Body& body, size_t child)
+{
+	// If child is a child of body, clear it.
+	if (body.childs.contains(child))
+		bodies.SetParentUser(child, {});
+	for (auto c : body.childs)
+		ClearChildFromBodyRecursive(bodies, bodies.bodies[c], child);
+}
+
+void Bodies::SetParentUser(size_t child, std::optional<size_t> parent)
+{
+	// When setting the parent from user, we expect that velocity vector is
+	// not grabbed. 
+	// There are two possibilities, either user is setting the parent to expected
+	// one or wrong one. In both cases proceed with change.
+	if (bodies[child].parent == parent)
+		return;
+
+	// We may stack overflow if there will be a loop in the tree. This means that if
+	// parent is actually a child of the child below we will recurse endlessly.
+	// To fix this, we need to break the loop.
+	if (parent)
+		ClearChildFromBodyRecursive(*this, bodies[child], *parent);
+
+	SetParentCommon(child, parent);
+
+	// When parent is set by user we need to update trajectories and conics for the child.
+	ProcessTrajectoriesParentRecursive<PointRungeKutta>(child, bodies);
+	ProcessTrajectoriesParentRecursive<PointVerlet>(child, bodies);
+	ProcessTrajectoriesParentRecursive<PointEuler>(child, bodies);
+
+	ComputeConicRecursive(child, bodies);
+}
+
+void Bodies::SetParentSimulation(size_t child, std::optional<size_t> parent)
+{
+	bodies[child].parentSimulation = parent;
+	// When setting parent from simulation, we know this is correct parent.
+	// Reason not setting it as current parent is that user has grabbed
+	// child's vector and is modifying it. We keep the current parent in that case.
+	if (vectorHandler.IsGrab(bodies[child].initialVector))
+	{
+		return;
+	}
+
+	SetParentCommon(child, parent);
+}
+
+void Bodies::SetParentInternal(size_t child, size_t parent)
 {
 	bodies[child].parent = parent;
 	bodies[parent].childs.insert(child);
-
-	ProcessTrajectoriesParent<PointRungeKutta>(bodies);
-	ProcessTrajectoriesParent<PointVerlet>(bodies);
-	ProcessTrajectoriesParent<PointEuler>(bodies);
 }
 
-void Bodies::ClearParent(size_t child)
+void Bodies::ClearParentInternal(size_t child)
 {
 	if (!bodies[child].parent)
 		return;
@@ -267,8 +410,8 @@ void Bodies::ComputeParents()
 
 	for (size_t child = 0; child < bodies.size(); ++child)
 	{
-		using EccentricityParentChildPair = std::pair<double, std::pair<size_t, size_t>>;
-		std::vector<EccentricityParentChildPair> values;
+		using EccentricityParents = std::pair<double, size_t>;
+		std::vector<EccentricityParents> values;
 
 		for (size_t parent = 0; parent < bodies.size(); ++parent)
 		{
@@ -276,77 +419,46 @@ void Bodies::ComputeParents()
 				continue;
 
 			double value = Utils::GetMeanDeviation(GetEccentricities<PointRungeKutta>(bodies[child], bodies[parent]));
-			values.push_back({ value, { parent, child } });
+			values.push_back({ value, parent });
 		}
+
+		bool parentSet = false;
 
 		if (!values.empty())
 		{
 			std::sort(std::begin(values), std::end(values));
 
 			auto value = values[0].first;
-			auto pair = values[0].second;
+			auto parent = values[0].second;
 			
-			if (values.size() > 1 && bodies[pair.first].isStar && values[1].first < PeriodicOrbitFocusSigma)
+			if (values.size() > 1 && bodies[parent].isStar && values[1].first < PeriodicOrbitFocusSigma)
 			{
 				value = values[1].first;
-				pair = values[1].second;
+				parent = values[1].second;
 			}
 
 			if (value < PeriodicOrbitFocusSigma)
-				SetParent(pair.first, pair.second);
+			{
+				SetParentSimulation(child, parent);
+				parentSet = true;
+			}
 		}
-	}
-}
 
-Bodies::Body::Conic Bodies::CreateConicFromApproximation(const ConicApproximation::Conic& conic)
-{
-	Body::Conic result;
-
-	switch (conic.GetType())
-	{
-	case ConicApproximation::Conic::Type::ellipse:
-	{
-		auto ellipse = conic.GetEllipse();
-		result.points = Utils::ConvertToFloat(Utils::GenerateEllipsePoints(ellipse.radius.x(), ellipse.radius.y()));
-		// TODO we are using polyline, possibly better solution will be scaled circle
-		result.points.push_back(result.points[0]);
-		result.position = (vec2)ellipse.position;
-		result.rotation = (float)ellipse.angle;
-	}
-	break;
-	case ConicApproximation::Conic::Type::hyperbola:
-	{
-		auto hyperbola = conic.GetHyperbola();
-		result.points = Utils::ConvertToFloat(Utils::GenerateHyperbolaPoints(hyperbola.radius.x(), hyperbola.radius.y()));
-		result.position = (vec2)hyperbola.position;
-		result.rotation = (float)hyperbola.angle;
-	}
-	break;
+		if (!parentSet)
+			SetParentSimulation(child, {});
 	}
 
-	return result;
+	ProcessTrajectoriesParent<PointEuler>(bodies);
+	ProcessTrajectoriesParent<PointVerlet>(bodies);
+	ProcessTrajectoriesParent<PointRungeKutta>(bodies);
+
+	ComputeConics();
 }
 
 void Bodies::ComputeConics()
 {
 	for (auto& body : bodies)
 	{
-		// TODO
-		std::vector<vec2d> positions(body.GetSimulation<PointRungeKutta>().trajectoryParent.positions.size());
-		for (size_t i = 0; i < positions.size(); i++)
-			positions[i] = (vec2d)body.GetSimulation<PointRungeKutta>().trajectoryParent.positions[i];
-
-		if (!positions.empty())
-		{
-			body.conicApproximatedFromPoints = CreateConicFromApproximation(ConicApproximation::ApproximateConic(positions));
-		}
-		if (body.parent)
-		{
-			auto initialPositionParentRelative = body.initialPosition - bodies[*body.parent].initialPosition;
-			auto initialVelocityParentRelative = body.initialVelocity - bodies[*body.parent].initialVelocity;
-
-			auto computedConic = ConicApproximation::ComputeConic(bodies[*body.parent].mass, body.mass, initialPositionParentRelative, initialVelocityParentRelative);
-			body.conicComputedFromParent = CreateConicFromApproximation(computedConic);
-		}
+		ComputeConic(body, bodies);
 	}
 }

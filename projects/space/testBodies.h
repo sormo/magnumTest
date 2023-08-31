@@ -17,8 +17,8 @@ namespace TestBodies
 	bool IsParentSelect = false;
 	bool IsCameraFollow = false;
 
-	enum DrawFlag { DrawFlagEuler = 0x1, DrawFlagVerlet = 0x2, DrawFlagRungeKutta = 0x4 };
-	int32_t DrawFlags = DrawFlagEuler | DrawFlagVerlet | DrawFlagRungeKutta;
+	enum DrawFlag { DrawFlagEuler = 0x1, DrawFlagVerlet = 0x2, DrawFlagRungeKutta = 0x4, DrawFlagApproximated = 0x8, DrawFlagComputed = 0x10 };
+	int32_t DrawFlags = DrawFlagEuler | DrawFlagVerlet | DrawFlagRungeKutta | DrawFlagApproximated | DrawFlagComputed;
 
 	std::optional<size_t> CurrentBody;
 
@@ -69,7 +69,9 @@ namespace TestBodies
 
 		ImGui::CheckboxFlags("Euler", &DrawFlags, DrawFlagEuler); ImGui::SameLine();
 		ImGui::CheckboxFlags("Verlet", &DrawFlags, DrawFlagVerlet); ImGui::SameLine();
-		ImGui::CheckboxFlags("RungeKutta", &DrawFlags, DrawFlagRungeKutta);
+		ImGui::CheckboxFlags("RungeKutta", &DrawFlags, DrawFlagRungeKutta); ImGui::SameLine();
+		ImGui::CheckboxFlags("Approximated", &DrawFlags, DrawFlagApproximated); ImGui::SameLine();
+		ImGui::CheckboxFlags("Computed", &DrawFlags, DrawFlagComputed);
 
 		float currentDay = CurrentTime / Unit::Day;
 		ImGui::SliderFloat("Current Time", &currentDay, 0.0f, TestBodies::SimulatedTime / Unit::Day); ImGui::SameLine(); ImGui::Text("[days]");
@@ -119,8 +121,8 @@ namespace TestBodies
 			bodies.AddBody(name, position, velocity, mass);
 		};
 
-		auto data = Utils::ReadJsonFromResource("systems", "solar_system.json");
-		//auto data = Utils::ReadJsonFromResource("systems", "test_system.json");
+		//auto data = Utils::ReadJsonFromResource("systems", "solar_system.json");
+		auto data = Utils::ReadJsonFromResource("systems", "test_system.json");
 
 		for (auto&[nameJson, body] : data.items())
 		{
@@ -137,6 +139,8 @@ namespace TestBodies
 	void Setup()
 	{
 		SetupSolarSystemWip();
+
+		bodies.vectorHandler.thresholdDistanceZoomIndependent = 0.03f;
 
 		//bodiesEuler.currentPoints[1].initializeCircularOrbit({ 0.0,0.0 }, massSun / massScaler);
 	}
@@ -157,7 +161,7 @@ namespace TestBodies
 				bodies.bodies[i].SetCurrentTime(CurrentTime);
 		}
 
-		bodies.Draw(DrawFlags & DrawFlagEuler, DrawFlags & DrawFlagVerlet, DrawFlags & DrawFlagRungeKutta);
+		bodies.Draw(DrawFlags & DrawFlagEuler, DrawFlags & DrawFlagVerlet, DrawFlags & DrawFlagRungeKutta, DrawFlags & DrawFlagApproximated, DrawFlags & DrawFlagComputed);
 
 		for (size_t i = 0; i < bodies.bodies.size(); i++)
 		{
@@ -204,20 +208,14 @@ namespace TestBodies
 			}
 		}
 
-		// vector handler returns true if vector is grabbed
-		bool result = bodies.vectorHandler.Update();
+		auto[inputGrabbed, vectorChanged] = bodies.vectorHandler.Update();
 
 		if (clickHandler.IsClick())
 		{
-			auto previousCurrentBody = CurrentBody;
 			auto clickBody = bodies.SelectBody(CurrentTime, getMousePositionWorld(), Common::GetZoomIndependentSize(0.2f));
-
 			if (CurrentBody && IsParentSelect)
 			{
-				if (clickBody)
-					bodies.SetParent(*clickBody, *CurrentBody);
-				else if (!result) // this is pretty tricky, we will allow to unselect only if we are not messing with vectors
-					bodies.ClearParent(*CurrentBody);
+				bodies.SetParentUser(*CurrentBody, clickBody);
 			}
 			else
 			{
@@ -231,16 +229,16 @@ namespace TestBodies
 
 		Draw();
 
-		if (result)
+		if (vectorChanged)
 		{
 			Simulate();
 		}
 
 		if (IsCameraFollow)
 		{
-			result = true;
+			inputGrabbed = true;
 		}
 
-		return result;
+		return inputGrabbed;
 	}
 }

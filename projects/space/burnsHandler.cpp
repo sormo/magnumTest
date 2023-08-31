@@ -18,10 +18,12 @@ void BurnsHandler::Draw()
 
 UpdateResult BurnsHandler::Update()
 {
-	if (vectorHandler.Update())
+	auto [inputGrabbed, vectorChanged] = vectorHandler.Update();
+
+	if (vectorChanged)
 		return UpdateResult::Modified;
 
-	if (vectorHandler.UpdateHighlight())
+	if (inputGrabbed || vectorHandler.UpdateHighlight())
 		return UpdateResult::InputGrab;
 
 	if (isMousePressed())
@@ -87,11 +89,12 @@ void BurnsHandler::NewBurn(Burn* burn)
 
 void BurnsHandler::Refresh()
 {
-	for (auto& vec : vectorHandler)
+	// TODO rework with Vector ids added later
+	for (auto& [vector, data] : vectorHandler)
 	{
-		Burn* burn = (Burn*)vec.context;
+		Burn* burn = (Burn*)data.context;
 
-		vec.from = (vec2)trajectory->positions[trajectory->getPoint(burn->time)];
-		vec.to = vec.from + (vec2)burn->velocity;
+		data.from = (vec2)trajectory->positions[trajectory->getPoint(burn->time)];
+		data.to = data.from + (vec2)burn->velocity;
 	}
 }

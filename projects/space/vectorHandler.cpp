@@ -2,30 +2,32 @@
 #include "utils.h"
 #include "common.h"
 
+VectorHandler::Vector VectorHandler::VectorCounter = 0;
+
 bool VectorHandler::UpdateHighlight()
 {
 	auto position = Magnum2D::getMousePositionWorld();
 	highlightVec.reset();
 
-	for (size_t i = 0; i < vectors.size(); i++)
+	for (auto& [vector, data] : vectors)
 	{
-		if (vectors[i].onToChange)
+		if (data.onToChange)
 		{
-			Magnum2D::vec2 offsetTo = position - vectors[i].to;
+			Magnum2D::vec2 offsetTo = position - data.to;
 			if (offsetTo.length() < Common::GetZoomIndependentSize(GrabToRadius))
 			{
-				highlightVec = i;
+				highlightVec = vector;
 				highlightType = HandleType::To;
 				return true;
 			}
 		}
 
-		if (vectors[i].onFromChange)
+		if (data.onFromChange)
 		{
-			Magnum2D::vec2 offsetFrom = position - vectors[i].from;
+			Magnum2D::vec2 offsetFrom = position - data.from;
 			if (offsetFrom.length() < Common::GetZoomIndependentSize(GrabToRadius))
 			{
-				highlightVec = i;
+				highlightVec = vector;
 				highlightType = HandleType::From;
 				return true;
 			}
@@ -35,37 +37,37 @@ bool VectorHandler::UpdateHighlight()
 	return false;
 }
 
-bool VectorHandler::Update()
+VectorHandler::UpdateResult VectorHandler::Update()
 {
 	if (Magnum2D::isMousePressed())
 	{
 		auto position = Magnum2D::getMousePositionWorld();
 
-		for (size_t i = 0; i < vectors.size(); i++)
+		for (auto& [vector, data] : vectors)
 		{
-			if (vectors[i].onToChange)
+			if (data.onToChange)
 			{
-				Magnum2D::vec2 offsetTo = position - vectors[i].to;
+				Magnum2D::vec2 offsetTo = position - data.to;
 				if (offsetTo.length() < Common::GetZoomIndependentSize(GrabToRadius))
 				{
-					grabVec = i;
+					grabVec = vector;
 					grabType = HandleType::To;
 					grabOffset = offsetTo;
 
-					return true;
+					return { true, false };
 				}
 			}
 
-			if (vectors[i].onFromChange)
+			if (data.onFromChange)
 			{
-				Magnum2D::vec2 offsetFrom = position - vectors[i].from;
+				Magnum2D::vec2 offsetFrom = position - data.from;
 				if (offsetFrom.length() < Common::GetZoomIndependentSize(GrabFromRadius))
 				{
-					grabVec = i;
+					grabVec = vector;
 					grabType = HandleType::From;
 					grabOffset = offsetFrom;
 
-					return true;
+					return { true, false };
 				}
 			}
 		}
@@ -73,58 +75,72 @@ bool VectorHandler::Update()
 	else if (Magnum2D::isMouseReleased() && grabVec)
 	{
 		grabVec.reset();
-		return true;
+		return { true, false };
 	}
 	else if (grabVec)
 	{
+		auto& vec = vectors[*grabVec];
 		auto position = Magnum2D::getMousePositionWorld() - grabOffset;
+
+		bool changed = false;
 
 		switch (grabType)
 		{
 		case HandleType::To:
-			vectors[*grabVec].to = vectors[*grabVec].onToChange(position, vectors[*grabVec].context);
+			if ((position - vec.to).length() > Common::GetZoomIndependentSize(thresholdDistanceZoomIndependent))
+			{
+				vec.to = vec.onToChange(position, vec.context);
+				changed = true;
+			}
 			break;
 		case HandleType::From:
-			vectors[*grabVec].from = vectors[*grabVec].onFromChange(position, vectors[*grabVec].context);
+			if ((position - vec.from).length() > Common::GetZoomIndependentSize(thresholdDistanceZoomIndependent))
+			{
+				vec.from = vec.onFromChange(position, vec.context);
+				changed = true;
+			}
 			break;
 		}
 
-		return true;
+		return { true, changed };
 	}
 
-	return false;
+	return { false, false };
 }
 
 void VectorHandler::Draw()
 {
-	for (size_t i = 0; i < vectors.size(); i++)
+	for (auto& [vector, data] : vectors)
 	{
-		Utils::DrawVector(vectors[i].from, vectors[i].to - vectors[i].from, Magnum2D::rgb(120, 120, 120));
+		Utils::DrawVector(data.from, data.to - data.from, Magnum2D::rgb(120, 120, 120));
 
-		if (vectors[i].onFromChange)
+		if (data.onFromChange)
 		{
-			Magnum2D::col3 circleColorFrom = highlightVec && *highlightVec == i && highlightType == HandleType::From ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-			Common::DrawCircleOutline(vectors[i].from, Common::GetZoomIndependentSize(GrabFromRadius), Common::GetZoomIndependentSize(0.03f), circleColorFrom);
+			Magnum2D::col3 circleColorFrom = highlightVec && *highlightVec == vector && highlightType == HandleType::From ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
+			Common::DrawCircleOutline(data.from, Common::GetZoomIndependentSize(GrabFromRadius), Common::GetZoomIndependentSize(0.03f), circleColorFrom);
 		}
-		if (vectors[i].onToChange)
+		if (data.onToChange)
 		{
-			Magnum2D::col3 circleColorTo = highlightVec && *highlightVec == i && highlightType == HandleType::To ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
-			Common::DrawCircleOutline(vectors[i].to, Common::GetZoomIndependentSize(GrabToRadius), Common::GetZoomIndependentSize(0.03f), circleColorTo);
+			Magnum2D::col3 circleColorTo = highlightVec && *highlightVec == vector && highlightType == HandleType::To ? Magnum2D::rgb(50, 255, 50) : Magnum2D::rgb(50, 50, 50);
+			Common::DrawCircleOutline(data.to, Common::GetZoomIndependentSize(GrabToRadius), Common::GetZoomIndependentSize(0.03f), circleColorTo);
 		}
-		Magnum2D::drawCircle(vectors[i].from, Common::GetZoomIndependentSize(0.03f), Magnum2D::rgb(10, 200, 10));
+		Magnum2D::drawCircle(data.from, Common::GetZoomIndependentSize(0.03f), Magnum2D::rgb(10, 200, 10));
 	}
 }
 
-void VectorHandler::Push(Magnum2D::vec2 from, Magnum2D::vec2 to, void* context, OnChange onFromChange, OnChange onToChange)
+VectorHandler::Vector VectorHandler::Push(Magnum2D::vec2 from, Magnum2D::vec2 to, void* context, OnChange onFromChange, OnChange onToChange)
 {
-	Vector newVector;
+	VectorData newVector;
 	newVector.from = from;
 	newVector.to = to;
 	newVector.context = context;
 	newVector.onFromChange = onFromChange;
 	newVector.onToChange = onToChange;
 
-	vectors.push_back(std::move(newVector));
+	Vector vector = ++VectorCounter;
+	vectors.insert({ vector, std::move(newVector) });
+
+	return vector;
 }
 
 void VectorHandler::Clear()
@@ -136,4 +152,30 @@ void VectorHandler::Clear()
 void VectorHandler::ClearOnlyVectors()
 {
 	vectors.clear();
+}
+
+void VectorHandler::ChangeFrom(Vector vector, const Magnum2D::vec2& from)
+{
+	auto& vec = vectors[vector];
+	if (from == vec.from)
+		return;
+
+	vec.to = from + (vec.to - vec.from);
+	vec.from = from;
+}
+
+void VectorHandler::SetTo(Vector vector, const Magnum2D::vec2& to)
+{
+	auto& vec = vectors[vector];
+	vec.to = to;
+}
+
+void VectorHandler::ClearGrab()
+{
+	grabVec = {};
+}
+
+bool VectorHandler::IsGrab(Vector vector)
+{
+	return grabVec == vector;
 }
