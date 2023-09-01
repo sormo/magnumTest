@@ -21,6 +21,7 @@
 #include <Magnum/Primitives/Circle.h>
 #include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Shaders/LineGL.h>
+#include <Magnum/Shaders/Line.h>
 #include <Magnum/Shaders/DistanceFieldVectorGL.h>
 #include <Magnum/Trade/MeshData.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
@@ -132,6 +133,8 @@ struct TextRendererCache
 class MyApplication : public Platform::Application
 {
 public:
+    static constexpr float CameraSizeFactor = 1.0f / 40.0f; // cameraSize = windowSize * factor
+
     explicit MyApplication(const Arguments& arguments);
 
     void drawEvent() override;
@@ -149,9 +152,10 @@ public:
     Containers::Pointer<Text::AbstractFont> m_font;
     Containers::Pointer<Text::GlyphCache> m_fontGlyphCache;
 
-    Shaders::FlatGL2D m_shader{ NoCreate };
+    Shaders::FlatGL2D m_shaderInstanced{ NoCreate };
     Shaders::FlatGL2D m_shaderDefault;
-    Shaders::LineGL2D m_lineShader;
+    Shaders::LineGL2D m_shaderLine{ NoCreate };
+    Shaders::LineGL2D m_shaderCircle{ NoCreate };
     Shaders::DistanceFieldVectorGL2D m_textShader;
 
     DrawMesh m_circle;
@@ -199,6 +203,7 @@ public:
     TextRendererCache m_textRendererCache;
 
     // Mesh for circle with width
+    GL::Mesh m_circleOutlineLineMesh;
     GL::Mesh m_circleLineMesh;
 
     Magnum2D::transform m_globalTransform;
@@ -213,6 +218,13 @@ Platform::Application::Configuration CreateConfiguration()
     result.addWindowFlags(Platform::Application::Configuration::WindowFlags::Type::Resizable);
 
     return result;
+}
+
+Trade::MeshData CreateCircleLineMeshData()
+{
+    Trade::MeshAttributeData attr{ Trade::MeshAttribute::Position, VertexFormat::Vector2, 0, 2, sizeof(Vector2) };
+    Containers::Array<char> vertexData{ sizeof(Vector2) *2 }; // two points {{0,0}, {0,0}}
+    return Trade::MeshData{ MeshPrimitive::Lines, std::move(vertexData), { attr } };
 }
 
 MyApplication::MyApplication(const Arguments& arguments)
@@ -233,12 +245,24 @@ MyApplication::MyApplication(const Arguments& arguments)
     m_startApplication = m_startFrame = std::chrono::high_resolution_clock::now();
 
     /* Create an instanced shader */
-    auto shaderConfig = Shaders::FlatGL2D::Configuration{};
-    shaderConfig.setFlags(Shaders::FlatGL2D::Flag::VertexColor | Shaders::FlatGL2D::Flag::InstancedTransformation );
-    m_shader = Shaders::FlatGL2D{ shaderConfig };
+    auto instanceShaderConfig = Shaders::FlatGL2D::Configuration{};
+    instanceShaderConfig.setFlags(Shaders::FlatGL2D::Flag::VertexColor | Shaders::FlatGL2D::Flag::InstancedTransformation );
+    m_shaderInstanced = Shaders::FlatGL2D{ instanceShaderConfig };
+
+    /* Create a linegl shader */
+    auto lineShaderConfig = Shaders::LineGL2D::Configuration{};
+    lineShaderConfig.setJoinStyle(Shaders::LineJoinStyle::Bevel);
+    m_shaderLine = Shaders::LineGL2D{ lineShaderConfig };
+
+    /* Create n linegl instanced shader */
+    auto circleShaderConfig = Shaders::LineGL2D::Configuration{};
+    circleShaderConfig.setCapStyle(Shaders::LineCapStyle::Round);
+    m_shaderCircle = Shaders::LineGL2D{ circleShaderConfig };
 
     // Mesh for nice circle outlines
-    m_circleLineMesh = MeshTools::compileLines(MeshTools::generateLines(Primitives::circle2DWireframe(64)));
+    m_circleOutlineLineMesh = MeshTools::compileLines(MeshTools::generateLines(Primitives::circle2DWireframe(64)));
+    // Mesh for nice circles
+    m_circleLineMesh = MeshTools::compileLines(MeshTools::generateLines(CreateCircleLineMeshData()));
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN) && !defined(CORRADE_TARGET_ANDROID)
     setSwapInterval(1);
@@ -309,10 +333,10 @@ void MyApplication::drawEvent()
 
     draw();
 
-    m_rectanle.Draw(m_shader, m_cameraProjection);
-    m_rectanleOutline.Draw(m_shader, m_cameraProjection);
-    m_circle.Draw(m_shader, m_cameraProjection);
-    m_circleOutline.Draw(m_shader, m_cameraProjection);
+    m_rectanle.Draw(m_shaderInstanced, m_cameraProjection);
+    m_rectanleOutline.Draw(m_shaderInstanced, m_cameraProjection);
+    m_circle.Draw(m_shaderInstanced, m_cameraProjection);
+    m_circleOutline.Draw(m_shaderInstanced, m_cameraProjection);
 
     imguiDrawBegin();
     
@@ -370,7 +394,7 @@ void MyApplication::imguiDrawEnd()
 void MyApplication::setupCamera()
 {
     m_windowSize = { (float)windowSize().x(), (float)windowSize().y() };
-    m_cameraSize = m_windowSize / 40.0f;
+    m_cameraSize = m_windowSize * CameraSizeFactor;
     m_cameraProjection = Matrix3::projection(m_cameraSize);
 }
 
@@ -663,6 +687,19 @@ namespace Magnum2D
         g_application->m_circle.instanceData.push_back({ CreateTransformation(center, 0.0f, vec2{ radius, radius }), color });
     }
 
+    void drawCircle2(vec2 center, float radius, col3 color)
+    {
+        float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
+        radius *= 2.0f*factor;
+
+        g_application->m_shaderCircle.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
+            .setTransformationProjectionMatrix(g_application->m_cameraProjection * CreateTransformation(center, 0.0f, { radius, radius }))
+            .setColor(color)
+            .setWidth(radius)
+            .setSmoothness(radius * MyApplication::CameraSizeFactor)
+            .draw(g_application->m_circleLineMesh);
+    }
+
     void drawCircleOutline(vec2 center, float radius, col3 color)
     {
         g_application->m_circleOutline.instanceData.push_back({ CreateTransformation(center, 0.0f, vec2{ radius, radius }), color });
@@ -676,12 +713,12 @@ namespace Magnum2D
         float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
         width *= factor;
 
-        g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
+        g_application->m_shaderLine.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
                                    .setTransformationProjectionMatrix(g_application->m_cameraProjection * CreateTransformation(center, 0.0f, { radius, radius }))
                                    .setColor(color)
                                    .setWidth(width)
                                    .setSmoothness(width / 2.0f)
-                                   .draw(g_application->m_circleLineMesh);
+                                   .draw(g_application->m_circleOutlineLineMesh);
     }
 
     void drawRectangle(vec2 center, float width, float height, col3 color)
@@ -730,6 +767,11 @@ namespace Magnum2D
         g_application->m_shaderDefault.setColor(color).setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix).draw(mesh);
     }
 
+    void drawPolyline2(const std::vector<vec2>& points, float width, col3 color)
+    {
+        drawPolyline2(std::span<vec2>(const_cast<std::vector<vec2>&>(points)), width, color);
+    }
+
     void drawPolyline2(std::span<vec2> points, float width, col3 color)
     {
         if (points.size() <= 1)
@@ -746,7 +788,7 @@ namespace Magnum2D
         float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
         width *= factor;
 
-        g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
+        g_application->m_shaderLine.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
                                    .setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix)
                                    .setColor(color)
                                    .setWidth(width)
@@ -779,7 +821,7 @@ namespace Magnum2D
         float factor = g_application->m_windowSize.x() / g_application->m_cameraSize.x();
         width *= factor;
 
-        g_application->m_lineShader.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
+        g_application->m_shaderLine.setViewportSize(Vector2{ GL::defaultFramebuffer.viewport().size() })
                                    .setTransformationProjectionMatrix(g_application->m_cameraProjection * g_application->m_globalTransformMatrix)
                                    .setColor(color)
                                    .setWidth(width)

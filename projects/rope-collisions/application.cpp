@@ -25,7 +25,7 @@ void Application::SetupRope()
 void Application::SetupRectangle()
 {
 	float offset = 0.01f * Magnum2D::getWindowSize().x();
-	Magnum2D::vec2 min = Magnum2D::convertWindowToCamera({ offset, offset });
+	Magnum2D::vec2 min = Magnum2D::convertWindowToWorld({ offset, offset });
 	Magnum2D::vec2 max = utils::getWindowRelativeCamera({ 0.08f, 0.08f });
 	rectangles.push_back(Rectangle::FromMinMax(min, max));
 
@@ -38,7 +38,7 @@ void Application::SetupRectangle()
 void Application::SetupCircle()
 {
 	float offset = 0.06f * Magnum2D::getWindowSize().x();
-	Magnum2D::vec2 center = Magnum2D::convertWindowToCamera({ Magnum2D::getWindowSize().x() - offset, offset });
+	Magnum2D::vec2 center = Magnum2D::convertWindowToWorld({ Magnum2D::getWindowSize().x() - offset, offset });
 	circles.push_back(Circle(center, 1.0f));
 }
 

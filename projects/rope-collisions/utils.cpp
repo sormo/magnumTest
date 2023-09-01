@@ -186,7 +186,7 @@ namespace utils
 
     Magnum2D::vec2 getWindowRelativeCamera(const Magnum2D::vec2& relative)
     {
-        return Magnum2D::convertWindowToCamera(getWindowRelative(relative));
+        return Magnum2D::convertWindowToWorld(getWindowRelative(relative));
     }
 
     Magnum2D::vec2 rotate(const Magnum2D::vec2& p, float degrees)

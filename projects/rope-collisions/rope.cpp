@@ -8,7 +8,7 @@
 
 void Rope::SimmulateStep()
 {
-	Magnum2D::vec2 mousePosition = Magnum2D::getMousePositionCamera();
+	Magnum2D::vec2 mousePosition = Magnum2D::getMousePositionWorld();
 
 	for (auto& node : nodes)
 	{
