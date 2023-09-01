@@ -89,12 +89,29 @@ namespace TestBodies
 			ImGui::Text("Name"); ImGui::SameLine(100); ImGui::Text(body.name.c_str());
 			ImGui::Text("Parent"); ImGui::SameLine(100); ImGui::Text(body.parent ? bodies.bodies[*body.parent].name.c_str() : "");
 			ImGui::SameLine(); ImGui::Checkbox("Select", &IsParentSelect);
+			if (body.parent != body.parentSimulation)
+			{
+				ImGui::SameLine();
+				std::string expectedParent = body.parentSimulation ? bodies.bodies[*body.parentSimulation].name : "<empty>";
+				ImGui::Text("Expected"); ImGui::SameLine(100); ImGui::Text(expectedParent.c_str());
+				ImGui::SameLine();
+				if (ImGui::Button("Set"))
+					bodies.SetParentUser(*CurrentBody, body.parentSimulation);
+			}
 
 			auto& trajectory = body.GetSimulation<PointRungeKutta>().trajectoryGlobal;
-			const auto& position = trajectory.times.empty() ? (vec2)body.initialPosition : trajectory.positions[trajectory.getPoint(CurrentTime)];
-			const auto& velocity = trajectory.times.empty() ? (vec2)body.initialVelocity : trajectory.velocities[trajectory.getPoint(CurrentTime)];
-			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m]", position.x(), position.y());
-			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [m/s]", velocity.x(), velocity.y());
+			auto position = trajectory.times.empty() ? (vec2)body.initialPosition : trajectory.positions[trajectory.getPoint(CurrentTime)];
+			auto velocity = trajectory.times.empty() ? (vec2)body.initialVelocity : trajectory.velocities[trajectory.getPoint(CurrentTime)];
+
+			if (body.parent)
+			{
+				auto& trajectoryParent = bodies.bodies[*body.parent].GetSimulation<PointRungeKutta>().trajectoryGlobal;
+				position -= trajectoryParent.times.empty() ? (vec2)bodies.bodies[*body.parent].initialPosition : trajectoryParent.positions[trajectoryParent.getPoint(CurrentTime)];
+				velocity -= trajectoryParent.times.empty() ? (vec2)bodies.bodies[*body.parent].initialVelocity : trajectoryParent.velocities[trajectoryParent.getPoint(CurrentTime)];
+			}
+
+			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f 10^6 [km]", (float)(position.x() / (Unit::Kilometer * 1e6)), (float)(position.y() / (Unit::Kilometer * 1e6)));
+			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [km/s]", (float)(velocity.x() * Unit::Second / Unit::Kilometer), (float)(velocity.y() * Unit::Second / Unit::Kilometer));
 
 			float mass = (float)( (body.mass / (Unit::Kilogram * 1e24)));
 			if (ImGui::InputFloat("Mass: ", &mass, 0.5f, 15.0f))
@@ -209,6 +226,11 @@ namespace TestBodies
 		}
 
 		auto[inputGrabbed, vectorChanged] = bodies.vectorHandler.Update();
+
+		if (vectorChanged && !CurrentBody)
+		{
+			CurrentBody = bodies.vectorHandlerLastBodyChange;
+		}
 
 		if (clickHandler.IsClick())
 		{

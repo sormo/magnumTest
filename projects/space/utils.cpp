@@ -251,12 +251,12 @@ namespace Unit
 
 	// mass
 	double Kilogram = 1.0;
-	double Ton = 10e3 * Kilogram;
-	double Megaton = 10e6 * Ton;
+	double Ton = 1e3 * Kilogram;
+	double Megaton = 1e6 * Ton;
 
 	// length
 	double Meter = 1.0;
-	double Kilometer = 10e3 * Meter;
+	double Kilometer = 1e3 * Meter;
 	double AU = 149597870700 * Meter;
 
 	void SetBaseSecond(double base)
@@ -272,14 +272,14 @@ namespace Unit
 	void SetBaseKilogram(double base)
 	{
 		Kilogram = base;
-		Ton = 10e3 * Kilogram;
-		Megaton = 10e6 * Ton;
+		Ton = 1e3 * Kilogram;
+		Megaton = 1e6 * Ton;
 	}
 
 	void SetBaseMeter(double base)
 	{
 		Meter = base;
-		Kilometer = 10e3 * Meter;
+		Kilometer = 1e3 * Meter;
 		AU = 149597870700 * Meter;
 	}
 }

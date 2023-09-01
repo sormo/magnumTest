@@ -140,4 +140,5 @@ struct Bodies
 	std::vector<Body> bodies;
 
 	VectorHandler vectorHandler;
+	size_t vectorHandlerLastBodyChange;
 };

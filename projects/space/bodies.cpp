@@ -1,7 +1,7 @@
 #include "bodies.h"
 #include "common.h"
 
-const float Bodies::ForceDrawFactor = 0.06f;
+const float Bodies::ForceDrawFactor = 0.04f;
 
 size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double mass)
 {
@@ -28,6 +28,7 @@ size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double 
 	VectorHandler::OnChange onFromChange = [this, index = bodies.size() - 1](const vec2& v, void*)
 	{
 		bodies[index].SetInitialState((vec2d)v, bodies[index].initialVelocity, bodies[index].mass);
+		vectorHandlerLastBodyChange = index;
 		return v;
 	};
 	VectorHandler::OnChange onToChange = [this, index = bodies.size() - 1](const vec2& v, void*)
@@ -37,6 +38,7 @@ size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double 
 		vec2d change = (vec2d)v - vp;
 
 		bodies[index].SetInitialState(bodies[index].initialPosition, bodies[index].initialVelocity + change / ForceDrawFactor, bodies[index].mass);
+		vectorHandlerLastBodyChange = index;
 		return v;
 	};
 
