@@ -8,6 +8,8 @@ using namespace Magnum2D;
 std::random_device g_randDev;
 std::mt19937 g_rand(g_randDev());
 
+extern double GravitationalConstant;
+
 namespace Utils
 {
 	vec2 GetRandomPosition(float xmin, float xmax, float ymin, float ymax)
@@ -237,6 +239,25 @@ namespace Utils
 		}
 
 		return result;
+	}
+
+	bool IsLeft(const vec2d& a, const vec2d& b, const vec2d& c)
+	{
+		return (c.x() - a.x()) * (b.y() - a.y()) - (c.y() - a.y()) * (b.x() - a.x()) < 0;
+	}
+
+	vec2d VelocityForCircularOrbit(const vec2d& point, const vec2d& center, double centerMass, bool left)
+	{
+		vec2d vec = center - point;
+		vec2d perpendicularDirection;
+
+		if (left)
+			perpendicularDirection = vec2d(vec.y(), -vec.x()).normalized();
+		else
+			perpendicularDirection = vec2d(-vec.y(), vec.x()).normalized();
+
+		double velocitySize = std::sqrt((GravitationalConstant * centerMass) / vec.length());
+		return perpendicularDirection * velocitySize;
 	}
 }
 

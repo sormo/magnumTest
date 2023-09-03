@@ -54,6 +54,11 @@ namespace Utils
 	std::vector<Magnum2D::vec2> ConvertToFloat(const std::vector<Magnum2D::vec2d>& arr);
 	std::vector<float> ConvertToFloat(const std::vector<double>& arr);
 
+	// check whether point c is on the left side of line a-b
+	bool IsLeft(const Magnum2D::vec2d& a, const Magnum2D::vec2d& b, const Magnum2D::vec2d& c);
+
+	Magnum2D::vec2d VelocityForCircularOrbit(const Magnum2D::vec2d& point, const Magnum2D::vec2d& center, double centerMass, bool left);
+
 	bool SigmaCompare(double a, double b, double sigma = 0.0000000001);
 
 	struct ClickHandler

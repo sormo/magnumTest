@@ -179,3 +179,13 @@ bool VectorHandler::IsGrab(Vector vector)
 {
 	return grabVec == vector;
 }
+
+bool VectorHandler::IsGrab()
+{
+	return grabVec.has_value();
+}
+
+std::optional<VectorHandler::Vector> VectorHandler::GetGrab()
+{
+	return grabVec;
+}

@@ -30,6 +30,8 @@ struct VectorHandler
 	void SetTo(Vector vector, const Magnum2D::vec2& to); // does not preserve, do not call callback, just set to to to (: (like give me my black backpack back)
 
 	bool IsGrab(Vector vector);
+	bool IsGrab();
+	std::optional<Vector> GetGrab();
 
 	void Clear();
 	void ClearGrab();

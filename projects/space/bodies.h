@@ -29,6 +29,7 @@ struct Bodies
 	float GetCurrentDistanceToParent(size_t index);
 
 	std::optional<size_t> SelectBody(double time, const vec2& selectPosition, float selectRadius);
+	size_t GetBodyOfGrab(VectorHandler::Vector grab);
 
 	void SetParentUser(size_t child, std::optional<size_t> parent);
 	void SetParentSimulation(size_t child, std::optional<size_t> parent);
@@ -140,5 +141,4 @@ struct Bodies
 	std::vector<Body> bodies;
 
 	VectorHandler vectorHandler;
-	size_t vectorHandlerLastBodyChange;
 };

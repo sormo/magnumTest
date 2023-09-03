@@ -93,10 +93,11 @@ namespace TestBodies
 			{
 				ImGui::SameLine();
 				std::string expectedParent = body.parentSimulation ? bodies.bodies[*body.parentSimulation].name : "<empty>";
-				ImGui::Text("Expected"); ImGui::SameLine(100); ImGui::Text(expectedParent.c_str());
+				ImGui::Text("(expected"); ImGui::SameLine(); ImGui::Text(expectedParent.c_str());
 				ImGui::SameLine();
 				if (ImGui::Button("Set"))
 					bodies.SetParentUser(*CurrentBody, body.parentSimulation);
+				ImGui::SameLine(); ImGui::Text(")");
 			}
 
 			auto& trajectory = body.GetSimulation<PointRungeKutta>().trajectoryGlobal;
@@ -112,6 +113,22 @@ namespace TestBodies
 
 			ImGui::Text("Position"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f 10^6 [km]", (float)(position.x() / (Unit::Kilometer * 1e6)), (float)(position.y() / (Unit::Kilometer * 1e6)));
 			ImGui::Text("Velocity"); ImGui::SameLine(100); ImGui::Text("%.3f %.3f [km/s]", (float)(velocity.x() * Unit::Second / Unit::Kilometer), (float)(velocity.y() * Unit::Second / Unit::Kilometer));
+
+			if (body.parent)
+			{
+				Bodies::Body& parent = bodies.bodies[*body.parent];
+				bool isLeft = Utils::IsLeft(parent.initialPosition, body.initialPosition, body.initialPosition + body.initialVelocity - parent.initialVelocity);
+				vec2d velocityCircular = Utils::VelocityForCircularOrbit(body.initialPosition, parent.initialPosition, parent.mass, isLeft);
+				
+				ImGui::Text("Initial velocity for circular orbit %.3f %.3f [km/s]", (float)(velocityCircular.x() * Unit::Second / Unit::Kilometer), (float)(velocityCircular.y() * Unit::Second / Unit::Kilometer));
+				ImGui::SameLine();
+				if (ImGui::Button("Set"))
+				{
+					// TODO what if more parents ?
+					body.SetInitialState(body.initialPosition, velocityCircular + parent.initialVelocity, body.mass);
+					Simulate();
+				}
+			}
 
 			float mass = (float)( (body.mass / (Unit::Kilogram * 1e24)));
 			if (ImGui::InputFloat("Mass: ", &mass, 0.5f, 15.0f))
@@ -195,10 +212,23 @@ namespace TestBodies
 
 		if (CurrentBody)
 		{
-			float effectiveRadius = bodies.bodies[*CurrentBody].GetSimulation<PointRungeKutta>().initialPoint.getEffectiveRadius();
+			Bodies::Body& body = bodies.bodies[*CurrentBody];
+
+			float effectiveRadius = body.GetSimulation<PointRungeKutta>().initialPoint.getEffectiveRadius();
 			auto position = bodies.GetCurrentPosition(*CurrentBody);
 
 			drawCircleOutline(position, effectiveRadius, rgb(50, 50, 50));
+
+			// draw vector for circular orbit
+			if (body.parent && bodies.vectorHandler.IsGrab(body.initialVector))
+			{
+				Bodies::Body& parent = bodies.bodies[*body.parent];
+
+				bool isLeft = Utils::IsLeft(parent.initialPosition, body.initialPosition, body.initialPosition + body.initialVelocity - parent.initialVelocity);
+				vec2d velocity = Utils::VelocityForCircularOrbit(body.initialPosition, parent.initialPosition, parent.mass, isLeft);
+
+				Utils::DrawVector((vec2)body.initialPosition, (vec2)velocity * Bodies::ForceDrawFactor, !body.HasCorrectParent() ? rgb(80, 10, 10) : rgb(150, 80, 80));
+			}
 		}
 	}
 
@@ -227,9 +257,9 @@ namespace TestBodies
 
 		auto[inputGrabbed, vectorChanged] = bodies.vectorHandler.Update();
 
-		if (vectorChanged && !CurrentBody)
+		if (bodies.vectorHandler.IsGrab() && !CurrentBody)
 		{
-			CurrentBody = bodies.vectorHandlerLastBodyChange;
+			CurrentBody = bodies.GetBodyOfGrab(*bodies.vectorHandler.GetGrab());
 		}
 
 		if (clickHandler.IsClick())

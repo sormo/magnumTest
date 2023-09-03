@@ -1,7 +1,7 @@
 #include "bodies.h"
 #include "common.h"
 
-const float Bodies::ForceDrawFactor = 0.04f;
+const float Bodies::ForceDrawFactor = 0.02f;
 
 size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double mass)
 {
@@ -28,7 +28,6 @@ size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double 
 	VectorHandler::OnChange onFromChange = [this, index = bodies.size() - 1](const vec2& v, void*)
 	{
 		bodies[index].SetInitialState((vec2d)v, bodies[index].initialVelocity, bodies[index].mass);
-		vectorHandlerLastBodyChange = index;
 		return v;
 	};
 	VectorHandler::OnChange onToChange = [this, index = bodies.size() - 1](const vec2& v, void*)
@@ -38,7 +37,6 @@ size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double 
 		vec2d change = (vec2d)v - vp;
 
 		bodies[index].SetInitialState(bodies[index].initialPosition, bodies[index].initialVelocity + change / ForceDrawFactor, bodies[index].mass);
-		vectorHandlerLastBodyChange = index;
 		return v;
 	};
 
@@ -463,4 +461,14 @@ void Bodies::ComputeConics()
 	{
 		ComputeConic(body, bodies);
 	}
+}
+
+size_t Bodies::GetBodyOfGrab(VectorHandler::Vector grab)
+{
+	for (size_t i = 0; i < bodies.size(); i++)
+	{
+		if (bodies[i].initialVector == grab)
+			return i;
+	}
+	return (size_t)-1;
 }
