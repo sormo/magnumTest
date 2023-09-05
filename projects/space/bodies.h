@@ -21,6 +21,10 @@ struct Bodies
 
 	void SimulateClear(double time);
 	void SimulateExtend(double time);
+	// this is optimization, we will simulate just few bodies hoping that changed trajectories won't affect
+	// other bodies much
+	void Resimulate(std::set<size_t> bodies);
+	void Resimulate(size_t body);
 
 	void Draw(bool euler, bool verlet, bool rungeKutta, bool approximated, bool computed);
 
@@ -38,8 +42,6 @@ struct Bodies
 	void SetParentInternal(size_t child, size_t parent);
 	void ClearParentInternal(size_t child);
 
-	void ComputeParents();
-	void ComputeConics();
 
 	double simulatedTime = 0.0;
 
@@ -97,7 +99,7 @@ struct Bodies
 		{
 			initialPosition = position;
 			initialVelocity = velocity;
-			mass = mass;
+			this->mass = mass;
 			simulationEuler.initialPoint = PointEuler(initialPosition, initialVelocity, mass);
 			simulationVerlet.initialPoint = PointVerlet(initialPosition, initialVelocity, mass);
 			simulationRK4.initialPoint = PointRungeKutta(initialPosition, initialVelocity, mass);
@@ -136,7 +138,12 @@ struct Bodies
 		Conic conicComputedFromParent;
 	};
 
+	void ComputeParents(std::vector<Body>& bodies);
+	void ComputeConics(std::vector<Body>& bodies);
+
 	void DrawConic(const Magnum2D::vec2& parentPosition, Body::Conic& conic, float width, const Magnum2D::col3& color);
+
+	void SimulateClearInternal(double time, std::set<size_t> indices);
 
 	std::vector<Body> bodies;
 

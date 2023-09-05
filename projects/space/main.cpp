@@ -96,7 +96,7 @@ void gui()
 		if (resimulate)
 		{
 			//TestMassPoint::Simulate();
-			TestBodies::Simulate();
+			TestBodies::Resimulate();
 		}
 	}
 

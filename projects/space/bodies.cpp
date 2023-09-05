@@ -1,5 +1,6 @@
 #include "bodies.h"
 #include "common.h"
+#include "simulationBodies.h"
 
 const float Bodies::ForceDrawFactor = 0.02f;
 
@@ -45,108 +46,78 @@ size_t Bodies::AddBody(const char* name, vec2d position, vec2d velocity, double 
 	return bodies.size() - 1;
 }
 
-template<class T>
-void ProcessTrajectoriesParentRecursive(size_t body, std::vector<Bodies::Body>& bodies)
-{
-	auto& simulation = bodies[body].GetSimulation<T>();
-	auto& trajectoryGlobal = simulation.trajectoryGlobal;
-	auto& trajectoryParent = simulation.trajectoryParent;
-
-	if (bodies[body].parent)
-	{
-		auto& trajectoryOfParent = bodies[*bodies[body].parent].GetSimulation<T>().trajectoryParent;
-		trajectoryParent.clear();
-		for (size_t i = 0; i < simulation.trajectoryGlobal.positions.size(); i++)
-		{
-			trajectoryParent.positions.push_back(trajectoryGlobal.positions[i] - trajectoryOfParent.positions[i]);
-			trajectoryParent.velocities.push_back(trajectoryGlobal.velocities[i] - trajectoryOfParent.velocities[i]);
-		}
-	}
-	else
-	{
-		trajectoryParent = trajectoryGlobal;
-	}
-
-	simulation.trajectoryParent.times = trajectoryGlobal.times;
-
-	for (size_t child : bodies[body].childs)
-		ProcessTrajectoriesParentRecursive<T>(child, bodies);
-}
-
-template<class T>
-void ProcessTrajectoriesParent(size_t parent, std::vector<Bodies::Body>& bodies)
-{
-	for (auto child : bodies[parent].childs)
-		ProcessTrajectoriesParentRecursive<T>(child, bodies);
-}
-
-template<class T>
-void ProcessTrajectoriesParent(std::vector<Bodies::Body>& bodies)
-{
-	for (size_t i = 0; i < bodies.size(); i++)
-	{
-		if (bodies[i].parent)
-			continue;
-		// from the root
-		bodies[i].GetSimulation<T>().trajectoryParent = bodies[i].GetSimulation<T>().trajectoryGlobal;
-
-		for (auto child : bodies[i].childs)
-			ProcessTrajectoriesParentRecursive<T>(child, bodies);
-	}
-}
-
-template<class T>
-void Simulate(double time, double simulatedTime, std::vector<Bodies::Body>& bodies)
-{
-	std::vector<std::vector<BurnPtr>> burns(bodies.size());
-	std::vector<T> points;
-	points.reserve(bodies.size());
-
-	for (auto& body : bodies)
-		points.push_back(body.GetSimulation<T>().currentPoint);
-
-	auto newTrajectories = Simulation::Simulate(points, burns, SimulationDt, time, simulatedTime, TestBodies::TrajectoryPointCount);
-	for (size_t i = 0; i < newTrajectories.size(); i++)
-	{
-		bodies[i].GetSimulation<T>().currentPoint = std::move(points[i]);
-		bodies[i].GetSimulation<T>().trajectoryGlobal.extend(std::move(newTrajectories[i]), 0);
-		//bodies[i].GetSimulation<T>().trajectoryGlobal.positions = std::move(newTrajectories[i].positions);
-		//bodies[i].GetSimulation<T>().trajectoryGlobal.velocities = std::move(newTrajectories[i].velocities);
-		//bodies[i].GetSimulation<T>().trajectoryGlobal.times = std::move(newTrajectories[i].times);
-	}
-
-	ProcessTrajectoriesParent<T>(bodies);
-}
-
-template<class T>
-void SimulateClear(double time, std::vector<Bodies::Body>& bodies)
-{
-	for (auto& body : bodies)
-		body.GetSimulation<T>().Clear();
-
-	Simulate<T>(time, 0.0, bodies);
-}
-
 void Bodies::SimulateClear(double time)
 {
-	::SimulateClear<PointEuler>(time, bodies);
-	::SimulateClear<PointVerlet>(time, bodies);
-	::SimulateClear<PointRungeKutta>(time, bodies);
+	std::set<size_t> indices;
+	for (size_t i = 0; i < bodies.size(); i++)
+		indices.insert(i);
 
-	simulatedTime = time;
-
-	ComputeParents();
+	SimulateClearInternal(time, indices);
 }
 
 void Bodies::SimulateExtend(double time)
 {
-	::Simulate<PointEuler>(time, simulatedTime, bodies);
-	::Simulate<PointVerlet>(time, simulatedTime, bodies);
-	::Simulate<PointRungeKutta>(time, simulatedTime, bodies);
+	auto euler = SimulationBodies<PointEuler>(bodies);
+	euler.SimulateExtend(time, simulatedTime);
+	auto verlet = SimulationBodies<PointVerlet>(bodies);
+	verlet.SimulateExtend(time, simulatedTime);
+	auto runge = SimulationBodies<PointRungeKutta>(bodies);
+	runge.SimulateExtend(time, simulatedTime);
 
 	simulatedTime += time;
 
-	ComputeParents();
+	for (auto [child, parent] : runge.ComputeParents())
+		SetParentSimulation(child, parent);
+
+	euler.ProcessTrajectoriesParent();
+	verlet.ProcessTrajectoriesParent();
+	runge.ProcessTrajectoriesParent();
+
+	runge.ComputeConics();
+}
+
+void Bodies::Resimulate(std::set<size_t> bodyIndices)
+{
+	if (simulatedTime == 0.0)
+		return;
+
+	SimulateClearInternal(simulatedTime, bodyIndices);
+}
+
+void Bodies::Resimulate(size_t body)
+{
+	std::set<size_t> indices;
+
+	auto accs = SimulationBodies<PointRungeKutta>(bodies).ComputeInitialAccelerationsToBody(body);
+	for (size_t i = 0; i < bodies.size(); i++)
+	{
+		if (accs[i].length() > 0.1)
+			indices.insert(i);
+	}
+	indices.insert(body);
+
+	Resimulate(indices);
+}
+
+void Bodies::SimulateClearInternal(double time, std::set<size_t> indices)
+{
+	auto euler = SimulationBodies<PointEuler>(bodies, indices);
+	euler.SimulateClear(time);
+	auto verlet = SimulationBodies<PointVerlet>(bodies, indices);
+	verlet.SimulateClear(time);
+	auto runge = SimulationBodies<PointRungeKutta>(bodies, indices);
+	runge.SimulateClear(time);
+	
+	simulatedTime = time;
+
+	for (auto [child, parent] : runge.ComputeParents())
+		SetParentSimulation(child, parent);
+
+	euler.ProcessTrajectoriesParent();
+	verlet.ProcessTrajectoriesParent();
+	runge.ProcessTrajectoriesParent();
+
+	runge.ComputeConics();
 }
 
 void Bodies::DrawConic(const vec2& parentPosition, Body::Conic& conic, float width, const Magnum2D::col3& color)
@@ -220,63 +191,6 @@ std::optional<size_t> Bodies::SelectBody(double time, const vec2& selectPosition
 	return {};
 }
 
-Bodies::Body::Conic CreateConicFromApproximation(const ConicApproximation::Conic& conic)
-{
-	Bodies::Body::Conic result;
-
-	switch (conic.GetType())
-	{
-	case ConicApproximation::Conic::Type::ellipse:
-	{
-		auto ellipse = conic.GetEllipse();
-		result.points = Utils::ConvertToFloat(Utils::GenerateEllipsePoints(ellipse.radius.x(), ellipse.radius.y()));
-		// TODO we are using polyline, possibly better solution will be scaled circle
-		result.points.push_back(result.points[0]);
-		result.position = (vec2)ellipse.position;
-		result.rotation = (float)ellipse.angle;
-	}
-	break;
-	case ConicApproximation::Conic::Type::hyperbola:
-	{
-		auto hyperbola = conic.GetHyperbola();
-		result.points = Utils::ConvertToFloat(Utils::GenerateHyperbolaPoints(hyperbola.radius.x(), hyperbola.radius.y()));
-		result.position = (vec2)hyperbola.position;
-		result.rotation = (float)hyperbola.angle;
-	}
-	break;
-	}
-
-	return result;
-}
-void ComputeConic(Bodies::Body& body, std::vector<Bodies::Body>& bodies)
-{
-	// TODO
-	std::vector<vec2d> positions(body.GetSimulation<PointRungeKutta>().trajectoryParent.positions.size());
-	for (size_t i = 0; i < positions.size(); i++)
-		positions[i] = (vec2d)body.GetSimulation<PointRungeKutta>().trajectoryParent.positions[i];
-
-	if (!positions.empty())
-	{
-		body.conicApproximatedFromPoints = CreateConicFromApproximation(ConicApproximation::ApproximateConic(positions));
-	}
-	if (body.parent)
-	{
-		auto initialPositionParentRelative = body.initialPosition - bodies[*body.parent].initialPosition;
-		auto initialVelocityParentRelative = body.initialVelocity - bodies[*body.parent].initialVelocity;
-
-		auto computedConic = ConicApproximation::ComputeConic(bodies[*body.parent].mass, body.mass, initialPositionParentRelative, initialVelocityParentRelative);
-		body.conicComputedFromParent = CreateConicFromApproximation(computedConic);
-	}
-}
-
-void ComputeConicRecursive(size_t body, std::vector<Bodies::Body>& bodies)
-{
-	ComputeConic(bodies[body], bodies);
-
-	for (auto child : bodies[body].childs)
-		ComputeConicRecursive(child, bodies);
-}
-
 void SetVelocityVectorSizeToParent(std::vector<Bodies::Body>& bodies, size_t body, VectorHandler& vectorHandler)
 {
 	vec2d parentVelocity = bodies[body].parent ? bodies[*bodies[body].parent].initialVelocity : vec2d{};
@@ -319,17 +233,18 @@ void Bodies::SetParentUser(size_t child, std::optional<size_t> parent)
 	// We may stack overflow if there will be a loop in the tree. This means that if
 	// parent is actually a child of the child below we will recurse endlessly.
 	// To fix this, we need to break the loop.
+	// TODO This will call recursively SetParentUser, may be done a lot of work
 	if (parent)
 		ClearChildFromBodyRecursive(*this, bodies[child], *parent);
 
 	SetParentCommon(child, parent);
 
 	// When parent is set by user we need to update trajectories and conics for the child.
-	ProcessTrajectoriesParentRecursive<PointRungeKutta>(child, bodies);
-	ProcessTrajectoriesParentRecursive<PointVerlet>(child, bodies);
-	ProcessTrajectoriesParentRecursive<PointEuler>(child, bodies);
+	SimulationBodies<PointRungeKutta>(bodies).ProcessTrajectoriesParentRecursive(child);
+	SimulationBodies<PointVerlet>(bodies).ProcessTrajectoriesParentRecursive(child);
+	SimulationBodies<PointEuler>(bodies).ProcessTrajectoriesParentRecursive(child);
 
-	ComputeConicRecursive(child, bodies);
+	SimulationBodies<PointRungeKutta>(bodies).ComputeConicRecursive(child);
 }
 
 void Bodies::SetParentSimulation(size_t child, std::optional<size_t> parent)
@@ -369,98 +284,6 @@ float Bodies::GetCurrentDistanceToParent(size_t index)
 		return {};
 	auto& sim = bodies[index].GetSimulation<PointRungeKutta>();
 	return sim.trajectoryParent.positions[sim.currentIndex].length();
-}
-
-template<class T>
-std::vector<double> GetEccentricities(Bodies::Body& a, Bodies::Body& b)
-{
-	Trajectory& traja = a.GetSimulation<T>().trajectoryGlobal;
-	Trajectory& trajb = b.GetSimulation<T>().trajectoryGlobal;
-
-	const size_t n = traja.positions.size();
-	double ma = a.mass, mb = b.mass;
-	double rm = (ma * mb) / (ma + mb);
-
-	double G = GravitationalConstant;
-
-	std::vector<double> E(n);
-	for (size_t i = 0; i < n; ++i)
-	{
-		vec2d velocity = (vec2d)traja.velocities[i] - (vec2d)trajb.velocities[i];
-
-		double v = velocity.length();
-		double vt = Utils::RotateVector(velocity, Utils::GetAngle(velocity)).y();
-		double r = (traja.positions[i] - trajb.positions[i]).length();
-		double energy = 0.5 * rm * v * v - (G * ma * mb) / r;
-
-		double angularMomentum = rm * r * vt; // use tangential part of velocity
-		double semilatusRectum = pow(angularMomentum, 2) / (rm * G * ma * mb);
-		double eccentricity = sqrt(1 + (2.0 * energy * pow(angularMomentum, 2)) / (rm * pow(G * ma * mb, 2)));
-
-		E[i] = eccentricity;
-	}
-
-	return E;
-}
-
-void Bodies::ComputeParents()
-{
-	// constant of allowed deviation of eccentricity for elliptical orbit
-	static const double PeriodicOrbitFocusSigma = 1.0;
-
-	for (size_t child = 0; child < bodies.size(); ++child)
-	{
-		using EccentricityParents = std::pair<double, size_t>;
-		std::vector<EccentricityParents> values;
-
-		for (size_t parent = 0; parent < bodies.size(); ++parent)
-		{
-			if (parent == child || bodies[parent].mass < bodies[child].mass)
-				continue;
-
-			double value = Utils::GetMeanDeviation(GetEccentricities<PointRungeKutta>(bodies[child], bodies[parent]));
-			values.push_back({ value, parent });
-		}
-
-		bool parentSet = false;
-
-		if (!values.empty())
-		{
-			std::sort(std::begin(values), std::end(values));
-
-			auto value = values[0].first;
-			auto parent = values[0].second;
-			
-			if (values.size() > 1 && bodies[parent].isStar && values[1].first < PeriodicOrbitFocusSigma)
-			{
-				value = values[1].first;
-				parent = values[1].second;
-			}
-
-			if (value < PeriodicOrbitFocusSigma)
-			{
-				SetParentSimulation(child, parent);
-				parentSet = true;
-			}
-		}
-
-		if (!parentSet)
-			SetParentSimulation(child, {});
-	}
-
-	ProcessTrajectoriesParent<PointEuler>(bodies);
-	ProcessTrajectoriesParent<PointVerlet>(bodies);
-	ProcessTrajectoriesParent<PointRungeKutta>(bodies);
-
-	ComputeConics();
-}
-
-void Bodies::ComputeConics()
-{
-	for (auto& body : bodies)
-	{
-		ComputeConic(body, bodies);
-	}
 }
 
 size_t Bodies::GetBodyOfGrab(VectorHandler::Vector grab)

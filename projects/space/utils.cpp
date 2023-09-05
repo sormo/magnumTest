@@ -147,7 +147,7 @@ namespace Utils
 
 		auto data = resource.getString(file.data());
 
-		return nlohmann::json::parse(data.data());
+		return nlohmann::json::parse((std::string)data);
 	}
 
 	double GetMeanDeviation(const std::vector<double>& data)

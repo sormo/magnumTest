@@ -22,6 +22,7 @@ add_executable(space main.cpp
                      point.cpp
                      simulation.h
                      simulation.cpp
+                     simulationBodies.h
                      camera.h
                      camera.cpp
                      common.h

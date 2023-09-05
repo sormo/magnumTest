@@ -41,12 +41,17 @@ namespace TestBodies
 			body.RecomputeEffectiveRadius();
 	}
 
-	void Simulate()
+	void Resimulate()
 	{
 		bodies.SimulateClear(SimulatedTime);
 	}
 
-	void Simulate(double time)
+	void Resimulate(size_t body)
+	{
+		bodies.Resimulate(body);
+	}
+
+	void SimulateExtend(double time)
 	{
 		bodies.SimulateExtend(time);
 		SimulatedTime += time;
@@ -55,7 +60,7 @@ namespace TestBodies
 	void Gui()
 	{
 		if (ImGui::SliderInt("Trajectory Point Count", &TrajectoryPointCount, 100, 1000))
-			Simulate();
+			Resimulate();
 
 		ImGui::Text("Simulated days: %.3f [days]", TestBodies::SimulatedTime / Unit::Day);
 		ImGui::SameLine();
@@ -65,7 +70,7 @@ namespace TestBodies
 		ImGui::InputFloat("Days: ", &simulateDays, 0.5f, 15.0f);
 		ImGui::SameLine();
 		if (ImGui::Button("Simulate"))
-			Simulate((double)simulateDays * Unit::Day);
+			SimulateExtend((double)simulateDays * Unit::Day);
 
 		ImGui::CheckboxFlags("Euler", &DrawFlags, DrawFlagEuler); ImGui::SameLine();
 		ImGui::CheckboxFlags("Verlet", &DrawFlags, DrawFlagVerlet); ImGui::SameLine();
@@ -126,15 +131,15 @@ namespace TestBodies
 				{
 					// TODO what if more parents ?
 					body.SetInitialState(body.initialPosition, velocityCircular + parent.initialVelocity, body.mass);
-					Simulate();
+					Resimulate(*CurrentBody);
 				}
 			}
 
 			float mass = (float)( (body.mass / (Unit::Kilogram * 1e24)));
-			if (ImGui::InputFloat("Mass: ", &mass, 0.5f, 15.0f))
+			if (ImGui::InputFloat("Mass: ", &mass, 0.1f, 1.0f))
 			{
-				body.SetInitialState(body.initialPosition, body.initialVelocity, mass);
-				Simulate();
+				body.SetInitialState(body.initialPosition, body.initialVelocity, ((double)mass)*Unit::Kilogram*1e24);
+				Resimulate(*CurrentBody);
 			} 
 			ImGui::SameLine(); ImGui::Text("[10^24 kg]");
 			ImGui::Checkbox("Camera Follow", &IsCameraFollow);
@@ -155,8 +160,8 @@ namespace TestBodies
 			bodies.AddBody(name, position, velocity, mass);
 		};
 
-		//auto data = Utils::ReadJsonFromResource("systems", "solar_system.json");
-		auto data = Utils::ReadJsonFromResource("systems", "test_system.json");
+		auto data = Utils::ReadJsonFromResource("systems", "solar_system.json");
+		//auto data = Utils::ReadJsonFromResource("systems", "test_system.json");
 
 		for (auto&[nameJson, body] : data.items())
 		{
@@ -247,9 +252,9 @@ namespace TestBodies
 			{
 				auto position = (vec2d)getMousePositionWorld();
 				auto name = Utils::GetRandomString(5);
-				bodies.AddBody(name.c_str(), position, {}, 1e24 * Unit::Kilogram);
+				auto body = bodies.AddBody(name.c_str(), position, {}, 1e24 * Unit::Kilogram);
 
-				Simulate();
+				Resimulate(body);
 
 				CurrentState = State::View;
 			}
@@ -283,7 +288,7 @@ namespace TestBodies
 
 		if (vectorChanged)
 		{
-			Simulate();
+			Resimulate(*CurrentBody);
 		}
 
 		if (IsCameraFollow)
